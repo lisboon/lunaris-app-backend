@@ -25,6 +25,22 @@ This includes, but is not limited to:
 - **Infra Layer** (`src/infra/`) — NestJS controllers, Prisma, external integrations
 - **Dependency**: Infra → Modules (never the other way around)
 
+## Domain Model (Multi-Tenant B2B)
+
+Lunaris follows a Slack/Linear-style multi-tenancy model for AAA game studios.
+
+| Entity | Role | Scope |
+|---|---|---|
+| `Organization` | The tenant (studio: CD Projekt, Ubisoft). Top-level isolation boundary. | Global |
+| `Workspace` | Project/team inside an Organization (e.g. "Cyberpunk Team"). Owns missions and game logic. | Per-Organization |
+| `User` | Real person. | Global (same user can belong to many orgs) |
+| `Membership` | Link `User × Organization` (and later Workspace). Carries role/permissions (RBAC). | Per-Organization |
+
+**Tenancy rules:**
+- Every Prisma query (via `PrismaQueryBuilder`) **must** filter by `organizationId`.
+- Workspace-scoped resources also carry `workspaceId`.
+- Auth resolves the `(organizationId, userId)` pair from the current session; permissions come from `Membership`, never from `User` directly.
+
 ## Stack
 
 - **In Development**

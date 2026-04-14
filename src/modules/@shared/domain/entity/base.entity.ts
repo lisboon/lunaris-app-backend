@@ -1,9 +1,6 @@
-import { v4 as uuidv4 } from 'uuid';
 import { Notification } from './validators/notification';
 import { DomainEvent } from '../events/domain-event.interface';
-
-// TODO(id-strategy): If we ever switch to ULID/NanoID, abstract this via
-// the injected IdGenerator instead of importing a UUID directly here.
+import { defaultIdGenerator } from '../id-generator/id-generator';
 
 export interface BaseEntityState {
   id: string;
@@ -24,7 +21,7 @@ export default abstract class BaseEntity {
   private _events: DomainEvent[] = [];
 
   constructor(
-    id: string = uuidv4(),
+    id: string = defaultIdGenerator.generate(),
     createdAt: Date = new Date(),
     updatedAt: Date = new Date(),
     active: boolean = true,

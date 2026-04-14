@@ -46,7 +46,7 @@ export class UserController {
   @UseGuards(AuthGuard, RolesGuard)
   @Role({ context: 'USER', level: 1 })
   async search(@Query() query: SearchUserInput, @Req() req: any) {
-    return this.service.search({ ...query, companyId: req.user.companyId });
+    return this.service.search({ ...query, organizationId: req.user.organizationId });
   }
 }
 ```

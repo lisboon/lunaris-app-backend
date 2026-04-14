@@ -2,6 +2,8 @@
     "cSpell.words": [
         "claude",
         "lunaris",
+        "usecase",
         "uuidv"
-    ]
+    ],
+    "js/ts.tsdk.path": "node_modules/typescript/lib"
 }

@@ -21,6 +21,25 @@ The project follows **DDD (Domain-Driven Design)** with **Clean Architecture / H
 
 ---
 
+## Domain Model (Multi-Tenant B2B)
+
+Slack/Linear-style multi-tenancy for AAA game studios:
+
+| Entity | Role | Scope |
+|---|---|---|
+| `Organization` | Tenant (studio). Top-level isolation boundary. | Global |
+| `Workspace` | Project/team inside an Organization. Owns missions and game logic. | Per-Organization |
+| `User` | Real person. | Global (may belong to many orgs) |
+| `Membership` | `User × Organization` link with role/permissions (RBAC). | Per-Organization |
+
+**Rules:**
+- Every Prisma query must filter by `organizationId`.
+- Workspace-scoped resources carry `workspaceId` too.
+- Permissions resolve from `Membership`, never from `User` directly.
+- "Account" is deprecated as a domain name — use `Workspace`.
+
+---
+
 ## Module Structure
 
 Each feature strictly follows this pattern:
@@ -135,7 +154,10 @@ src/infra/http/[module]/
 4. **DTOs with class-validator** in controllers, pure interfaces in use cases
 5. **Repositories implement Gateways** — always define the interface first
 6. **Entities extend BaseEntity** from `src/modules/@shared/`
-7. **Tests use the makeSut pattern** with mocks via jest.fn()
-8. **Domain errors** — use existing classes, never throw generic errors
-9. **Guards in controllers** — always `@UseGuards(AuthGuard, RolesGuard)` + `@Role()`
-10. **Conventional commits** — the project uses commitlint
+7. **Domain events** — entity accumulates via `this.addEvent(event)`; Use Case dispatches via `entity.pullEvents()` **after** `await gateway.save()` commits. Never dispatch from inside the entity.
+8. **Notification shape** — `notification.toJSON()` returns `ValidationError[]` = `{ field: string | null, message: string }[]`
+9. **Pagination** — `SearchParams<Filter>` / `SearchResult<T>` from `@shared` use **camelCase** (`perPage`, `sortDir`, `currentPage`, `lastPage`)
+10. **Tests use the makeSut pattern** with mocks via jest.fn()
+11. **Domain errors** — use existing classes, never throw generic errors
+12. **Guards in controllers** — always `@UseGuards(AuthGuard, RolesGuard)` + `@Role()`
+13. **Conventional commits** — the project uses commitlint

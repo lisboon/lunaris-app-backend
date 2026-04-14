@@ -1,9 +1,11 @@
 export class NotFoundError extends Error {
-  public status: number;
+  public status = 404;
 
-  constructor(message: string) {
+  constructor(identifier: string, entity?: { name: string }) {
+    const message = entity
+      ? `${entity.name} not found: ${identifier}`
+      : `Resource not found: ${identifier}`;
     super(message);
     this.name = 'NotFoundError';
-    this.status = 404;
   }
 }
