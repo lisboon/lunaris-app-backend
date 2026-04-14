@@ -2,8 +2,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { Notification } from './validators/notification';
 import { DomainEvent } from '../events/domain-event.interface';
 
-// TODO(id-strategy): se algum dia trocar para ULID/NanoID, abstrair via
-// IdGenerator injetado em vez de importar uuid direto aqui.
+// TODO(id-strategy): If we ever switch to ULID/NanoID, abstract this via
+// the injected IdGenerator instead of importing a UUID directly here.
 
 export interface BaseEntityState {
   id: string;

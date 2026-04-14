@@ -1,7 +1,7 @@
 import { FieldsErrors } from '../entity/validators/validator-fields-interface';
 
 const DEFAULT_MESSAGE =
-  'Não foi possível processar a requisição com os parâmetros fornecidos';
+  'The request could not be processed with the provided parameters';
 
 export abstract class BaseValidationError extends Error {
   public status = 422;
