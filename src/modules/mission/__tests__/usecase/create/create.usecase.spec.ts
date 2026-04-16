@@ -3,6 +3,7 @@ import { Mission } from '../../../domain/mission.entity';
 import { EntityValidationError } from '@/modules/@shared/domain/errors/validation.error';
 
 const orgId = '11111111-1111-4111-8111-111111111111';
+const workspaceId = '33333333-3333-4333-8333-333333333333';
 const authorId = '22222222-2222-4222-8222-222222222222';
 
 const validInput = () => ({
@@ -10,6 +11,7 @@ const validInput = () => ({
   name: 'The Old Country',
   description: 'desc',
   organizationId: orgId,
+  workspaceId,
   authorId,
 });
 

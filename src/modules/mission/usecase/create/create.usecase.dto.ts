@@ -12,6 +12,7 @@ import {
   Length,
   Matches,
 } from 'class-validator';
+import { EMissionStatus } from '@prisma/client';
 
 export class CreateUseCaseInputDto {
   @ApiProperty({
@@ -52,6 +53,10 @@ export class CreateUseCaseInputDto {
   organizationId: string;
 
   @ApiHideProperty()
+  @IsUUID('4', { message: 'Invalid workspace' })
+  workspaceId: string;
+
+  @ApiHideProperty()
   @IsUUID('4', { message: 'Invalid author' })
   authorId: string;
 }
@@ -60,12 +65,15 @@ export interface CreateUseCaseOutputDto {
   id: string;
   name: string;
   description: string | null;
-  status: string;
+  status: EMissionStatus;
   activeHash: string | null;
   organizationId: string;
+  workspaceId: string;
   authorId: string;
+  active: boolean;
   createdAt: Date;
   updatedAt: Date;
+  deletedAt: Date | undefined;
 }
 
 export interface CreateUseCaseInterface

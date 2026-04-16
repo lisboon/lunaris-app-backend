@@ -34,6 +34,7 @@ export default class CreateUseCase implements CreateUseCaseInterface {
       name: input.name,
       description: input.description,
       organizationId: input.organizationId,
+      workspaceId: input.workspaceId,
       authorId: input.authorId,
     });
 

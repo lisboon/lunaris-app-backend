@@ -66,3 +66,5 @@ firebase-credentials.json
 /worktree
 .worktrees
 /worktrees
+
+/generated/prisma

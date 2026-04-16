@@ -3,6 +3,7 @@ import { Mission } from '../../../domain/mission.entity';
 import { Notification } from '@/modules/@shared/domain/entity/validators/notification';
 
 const validOrgId = '11111111-1111-4111-8111-111111111111';
+const validWorkspaceId = '33333333-3333-4333-8333-333333333333';
 const validAuthorId = '22222222-2222-4222-8222-222222222222';
 
 const buildMission = (
@@ -10,6 +11,7 @@ const buildMission = (
     id: string;
     name: string;
     organizationId: string;
+    workspaceId: string;
     authorId: string;
   }> = {},
 ): Mission =>
@@ -17,6 +19,7 @@ const buildMission = (
     id: 'qst_valid',
     name: 'Valid Name',
     organizationId: validOrgId,
+    workspaceId: validWorkspaceId,
     authorId: validAuthorId,
     ...overrides,
   });

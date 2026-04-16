@@ -20,11 +20,14 @@ const buildVersion = (overrides: Partial<{ isValid: boolean }> = {}) => ({
   ...overrides,
 });
 
+const workspaceId = '33333333-3333-4333-8333-333333333333';
+
 const makeSut = (versionResult: any = buildVersion()) => {
   const mission = Mission.create({
     id: 'qst_old_country',
     name: 'Old',
     organizationId: orgId,
+    workspaceId,
     authorId,
   });
   mission.pullEvents();

@@ -4,11 +4,14 @@ import { Mission } from '../../domain/mission.entity';
 const orgId = '11111111-1111-4111-8111-111111111111';
 const authorId = '22222222-2222-4222-8222-222222222222';
 
+const workspaceId = '33333333-3333-4333-8333-333333333333';
+
 const makeSut = () => {
   const mission = Mission.create({
     id: 'qst_old_country',
     name: 'Old',
     organizationId: orgId,
+    workspaceId,
     authorId,
   });
 
@@ -93,6 +96,7 @@ describe('MissionFacade', () => {
       id: mission.id,
       name: mission.name,
       organizationId: orgId,
+      workspaceId,
       authorId,
     };
     const out = await facade.create(input);

@@ -12,11 +12,12 @@ export interface MissionDto {
   status: EMissionStatus;
   activeHash: string | null;
   organizationId: string;
+  workspaceId: string;
   authorId: string;
-  active?: boolean;
-  createdAt?: Date;
-  updatedAt?: Date;
-  deletedAt?: Date;
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | undefined;
 }
 
 export interface FindByIdFacadeInputDto {
@@ -30,6 +31,7 @@ export interface CreateFacadeInputDto {
   name: string;
   description?: string;
   organizationId: string;
+  workspaceId: string;
   authorId: string;
 }
 export type CreateFacadeOutputDto = MissionDto;

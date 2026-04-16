@@ -16,11 +16,14 @@ const graphData: CanvasGraph = {
   edges: [],
 };
 
+const workspaceId = '33333333-3333-4333-8333-333333333333';
+
 const makeSut = () => {
   const mission = Mission.create({
     id: 'qst_old_country',
     name: 'Old',
     organizationId: orgId,
+    workspaceId,
     authorId,
   });
   const savedRecord = {

@@ -35,6 +35,9 @@ export class MissionRules {
   @IsUUID('4', { message: 'Invalid organization', groups: ['create'] })
   organizationId: string;
 
+  @IsUUID('4', { message: 'Invalid workspace', groups: ['create'] })
+  workspaceId: string;
+
   @IsUUID('4', { message: 'Invalid author', groups: ['create'] })
   authorId: string;
 

@@ -1,6 +1,6 @@
 ---
 name: mission
-description: Mission module — entity/usecases/repository/facade for UE5 mission orchestration with DAG validation, SHA-256 versioning and publish workflow
+description: Mission module — entity/usecases/repository/facade for UE5 mission orchestration with DAG validation, SHA-256 versioning and publish workflow. Workspace-scoped.
 user-invocable: true
 argument-hint: ""
 ---
@@ -9,7 +9,7 @@ argument-hint: ""
 
 **Purpose:** domain model for UE5 mission authoring. A *Mission* is a DAG of gameplay nodes (objectives, conditions, dialogues, cinematics, rewards) compiled into an immutable *MissionContract* identified by a SHA-256 *activeHash*. The UE5 runtime pulls the published contract via the `activeHash`.
 
-**Scope:** multi-tenant — missions are scoped per `Organization`. Every gateway call carries `organizationId`.
+**Scope:** multi-tenant — missions are **workspace-scoped** (Organization → Workspace → Mission). Every gateway call carries `organizationId`. The entity also holds `workspaceId` for workspace-level isolation.
 
 ---
 
@@ -90,7 +90,13 @@ Gateway returns `Mission | null`. The `FindByIdUseCase` throws `new NotFoundErro
 - `MissionVersion` queries filter through the relation: `{ missionId, mission: { organizationId } }`.
 - `saveVersion()` pre-checks that the mission belongs to the org before inserting.
 
-### 5. DAG validation cannot infinite-loop
+### 5. Workspace-scoped
+- The entity carries `workspaceId` (required, validated as UUID on create).
+- The repository persists `workspaceId` on create and reads it back in `toDomainEntity`.
+- The controller route is `workspaces/:workspaceId/missions` — the param is injected into the create payload.
+- `workspaceId` is immutable on the entity (no setter, set only at creation).
+
+### 6. DAG validation cannot infinite-loop
 `DAGValidatorService.validate(graph, startNodeId?)` uses:
 - **Tricolor DFS (WHITE/GRAY/BLACK) with explicit stack** → detects cycles without stack-overflow, terminates even on adversarial inputs.
 - **Dangling-edge check** → edges referencing missing nodes.
@@ -99,11 +105,14 @@ Gateway returns `Mission | null`. The `FindByIdUseCase` throws `new NotFoundErro
 
 Returns `{ isValid, errors: DAGValidationError[] }` where each error has `{ nodeId, errorType, message }`.
 
-### 6. Hash = identity of a version
+### 7. Hash = identity of a version
 `MissionHashService.compute(contract)` returns SHA-256 hex of `JSON.stringify(contract)`. Same content → same hash → runtime cache hit. Injected into `SaveVersionUseCase`.
 
-### 7. Facade DTOs are pure interfaces
+### 8. Facade DTOs are pure interfaces
 `mission.facade.dto.ts` never imports class-validator. Class-validator decorators only live in `usecase/**/*.usecase.dto.ts` (because controllers use those classes). Facade consumers get clean interfaces.
+
+### 9. `active` field aligned with BaseEntity
+The entity persists `active` on create and update. `toDomainEntity` reads `active` from the DB row. Soft-delete sets `deletedAt` + deactivates (`active = false`).
 
 ---
 
@@ -112,7 +121,7 @@ Returns `{ isValid, errors: DAGValidationError[] }` where each error has `{ node
 | Use case | Signature (input → output) | Notes |
 |---|---|---|
 | `FindByIdUseCase` | `{id, organizationId}` → `Mission` | throws `NotFoundError(id, Mission)` |
-| `CreateUseCase` | `{id, name, description?, organizationId, authorId}` → `MissionDto` | id must be snake_case; rejects duplicates; dispatches `MissionCreatedEvent` |
+| `CreateUseCase` | `{id, name, description?, organizationId, workspaceId, authorId}` → `MissionDto` | id must be snake_case; rejects duplicates; dispatches `MissionCreatedEvent` |
 | `UpdateUseCase` | `{id, organizationId, name?, description?}` → `void` | uses `mission.updateMission()` |
 | `SaveVersionUseCase` | `{missionId, organizationId, authorId, graphData, missionData, isValid, validationErrors?}` → `{id, missionId, hash, isValid, ...}` | computes SHA-256 hash |
 | `PublishUseCase` | `{missionId, organizationId, versionHash}` → `{id, name, status, activeHash, updatedAt}` | rejects invalid versions; dispatches `MissionPublishedEvent` |
@@ -132,6 +141,19 @@ Returns `{ isValid, errors: DAGValidationError[] }` where each error has `{ node
 
 ---
 
+## Infra wiring
+
+- `src/infra/http/mission/mission.module.ts` — `MissionModule` exports `MissionService` and provides `MissionFacade` via factory.
+- `src/infra/http/mission/mission.controller.ts` — REST surface at `workspaces/:workspaceId/missions`. Guarded by `AuthGuard + RolesGuard`.
+  - `POST /` (create) — requires `DESIGNER`, extracts `workspaceId` from route param.
+  - `POST /:id/versions` (saveVersion) — requires `DESIGNER`.
+  - `PUT /:id/publish` — requires `DESIGNER`.
+  - `GET /:id/versions` (listVersions) — requires `VIEWER`.
+  - `GET /:id/active` (getActive) — requires `VIEWER`.
+- `src/infra/http/mission/mission.service.ts` — thin adapter delegating to `MissionFacade`.
+
+---
+
 ## Testing conventions
 
 - `__tests__/` mirrors the module structure.
@@ -140,12 +162,13 @@ Returns `{ isValid, errors: DAGValidationError[] }` where each error has `{ node
 - Facade mocked at each UseCase boundary.
 - DAG validator specs include: simple cycle, self-loop, deep cycle, dangling edge, dead-end, terminal-node allowed, unreachable node.
 - `EventDispatcher` mocked in Create/Publish specs to assert events fire **only after** `repository.create/update` resolves.
+- All test factories include `workspaceId` as a required UUID field.
+- Current coverage: 32 suites, 141 tests, all green.
 
 ---
 
 ## Open items (not yet in the module)
 
-- `src/infra/http/mission/` (controller + service + module) — not scaffolded.
 - `DAGValidatorService` is currently **not wired** into `SaveVersionUseCase`. Callers pass `isValid` / `validationErrors` from outside. When you wire it, inject the service into `SaveVersionUseCase` and compute `isValid` from `graphData` inside the usecase.
 - No `DeleteUseCase` yet (soft delete via `mission.delete()` is on the entity).
 - No integration tests under `test/integration/mission/`.

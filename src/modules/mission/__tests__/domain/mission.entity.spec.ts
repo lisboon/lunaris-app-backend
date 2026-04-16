@@ -8,6 +8,7 @@ const validProps = () => ({
   id: 'qst_old_country',
   name: 'The Old Country',
   organizationId: '11111111-1111-4111-8111-111111111111',
+  workspaceId: '33333333-3333-4333-8333-333333333333',
   authorId: '22222222-2222-4222-8222-222222222222',
 });
 

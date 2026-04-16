@@ -12,6 +12,7 @@ export interface MissionProps {
   status?: EMissionStatus;
   activeHash?: string;
   organizationId: string;
+  workspaceId: string;
   authorId: string;
   active?: boolean;
   createdAt?: Date;
@@ -25,6 +26,7 @@ export class Mission extends BaseEntity {
   private _status: EMissionStatus;
   private _activeHash?: string;
   private _organizationId: string;
+  private _workspaceId: string;
   private _authorId: string;
 
   constructor(props: MissionProps) {
@@ -40,6 +42,7 @@ export class Mission extends BaseEntity {
     this._status = props.status ?? EMissionStatus.DRAFT;
     this._activeHash = props.activeHash;
     this._organizationId = props.organizationId;
+    this._workspaceId = props.workspaceId;
     this._authorId = props.authorId;
   }
 
@@ -61,6 +64,10 @@ export class Mission extends BaseEntity {
 
   get organizationId(): string {
     return this._organizationId;
+  }
+
+  get workspaceId(): string {
+    return this._workspaceId;
   }
 
   get authorId(): string {
@@ -137,6 +144,7 @@ export class Mission extends BaseEntity {
       status: this._status,
       activeHash: this._activeHash ?? null,
       organizationId: this._organizationId,
+      workspaceId: this._workspaceId,
       authorId: this._authorId,
       active: this._active,
       createdAt: this._createdAt,

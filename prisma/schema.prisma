@@ -1,0 +1,268 @@
+// Lunaris — Prisma 7 schema
+// Multi-tenant B2B: Organization → Workspace → (Mission, DialogueTree)
+// Aligned with src/modules/@shared/domain/entity/base.entity.ts:
+//   BaseEntity = { id, active, createdAt, updatedAt, deletedAt }
+// ApiKey is the lone exception: uses `revokedAt` instead of `deletedAt`
+// (engine module convention — see .claude/skills/modules/engine/SKILL.md).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────────────────────
+// Identity
+// ─────────────────────────────────────────────────────────────
+
+model User {
+  id        String    @id @default(uuid())
+  email     String    @unique
+  name      String
+  password  String
+  avatarUrl String?   @map("avatar_url")
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  memberships Member[]
+  invitesSent Invite[] @relation("InvitedBy")
+
+  @@map("users")
+}
+
+model Organization {
+  id        String    @id @default(uuid())
+  name      String
+  slug      String    @unique
+  avatarUrl String?   @map("avatar_url")
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  members       Member[]
+  workspaces    Workspace[]
+  missions      Mission[]
+  dialogueTrees DialogueTree[]
+  invites       Invite[]
+  apiKeys       OrganizationApiKey[]
+
+  @@map("organizations")
+}
+
+model Workspace {
+  id             String    @id @default(uuid())
+  organizationId String    @map("organization_id")
+  name           String
+  active         Boolean   @default(true)
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+
+  organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  missions      Mission[]
+  dialogueTrees DialogueTree[]
+
+  @@index([organizationId])
+  @@map("workspaces")
+}
+
+enum EMemberRole {
+  ADMIN
+  DESIGNER
+  VIEWER
+
+  @@map("member_role")
+}
+
+model Member {
+  id             String      @id @default(uuid())
+  userId         String      @map("user_id")
+  organizationId String      @map("organization_id")
+  role           EMemberRole @default(DESIGNER)
+  active         Boolean     @default(true)
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+  deletedAt      DateTime?   @map("deleted_at")
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  missionsAuthored  Mission[]        @relation("MissionAuthor")
+  versionsAuthored  MissionVersion[] @relation("VersionAuthor")
+  dialoguesAuthored DialogueTree[]   @relation("DialogueAuthor")
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+  @@map("members")
+}
+
+enum EInviteStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  CANCELLED
+
+  @@map("invite_status")
+}
+
+model Invite {
+  id             String        @id @default(uuid())
+  email          String
+  role           EMemberRole   @default(DESIGNER)
+  status         EInviteStatus @default(PENDING)
+  token          String        @unique
+  organizationId String        @map("organization_id")
+  invitedById    String        @map("invited_by_id")
+  expiresAt      DateTime      @map("expires_at")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedBy    User         @relation("InvitedBy", fields: [invitedById], references: [id])
+
+  @@index([organizationId])
+  @@index([token])
+  @@map("invites")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Mission (workspace-scoped)
+// ─────────────────────────────────────────────────────────────
+
+enum EMissionStatus {
+  DRAFT
+  REVIEW
+  APPROVED
+  ARCHIVED
+
+  @@map("mission_status")
+}
+
+model Mission {
+  id             String         @id
+  organizationId String         @map("organization_id")
+  workspaceId    String         @map("workspace_id")
+  name           String
+  description    String?
+  status         EMissionStatus @default(DRAFT)
+  activeHash     String?        @map("active_hash")
+  authorId       String         @map("author_id")
+  active         Boolean        @default(true)
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+  deletedAt      DateTime?      @map("deleted_at")
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workspace    Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  author       Member           @relation("MissionAuthor", fields: [authorId], references: [id])
+  versions     MissionVersion[]
+
+  @@index([organizationId, status])
+  @@index([organizationId, activeHash])
+  @@index([workspaceId])
+  @@map("missions")
+}
+
+// Immutable snapshot — no updatedAt, no deletedAt by design.
+model MissionVersion {
+  id               String   @id @default(uuid())
+  missionId        String   @map("mission_id")
+  hash             String   @unique
+  graphData        Json     @map("graph_data")
+  missionData      Json     @map("mission_data")
+  isValid          Boolean  @default(false) @map("is_valid")
+  validationErrors Json?    @map("validation_errors")
+  authorId         String   @map("author_id")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  mission Mission @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  author  Member  @relation("VersionAuthor", fields: [authorId], references: [id])
+
+  @@index([missionId, createdAt(sort: Desc)])
+  @@map("mission_versions")
+}
+
+model DialogueTree {
+  id             String    @id
+  organizationId String    @map("organization_id")
+  workspaceId    String    @map("workspace_id")
+  name           String
+  description    String?
+  graphData      Json      @map("graph_data")
+  authorId       String    @map("author_id")
+  active         Boolean   @default(true)
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workspace    Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  author       Member       @relation("DialogueAuthor", fields: [authorId], references: [id])
+
+  @@index([organizationId])
+  @@index([workspaceId])
+  @@map("dialogue_trees")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Engine — UE5 plugin API keys
+// Soft-delete semantic is `revokedAt`, not `deletedAt`.
+// `keyHash` is globally unique (SHA-256) — the AuthGuard looks it
+// up without org context and trusts the row's organizationId.
+// ─────────────────────────────────────────────────────────────
+
+model OrganizationApiKey {
+  id             String    @id @default(uuid())
+  organizationId String    @map("organization_id")
+  name           String
+  keyHash        String    @unique @map("key_hash")
+  prefix         String
+  lastUsedAt     DateTime? @map("last_used_at")
+  expiresAt      DateTime? @map("expires_at")
+  revokedAt      DateTime? @map("revoked_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@map("organization_api_keys")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Runtime — per-player mission progress
+// ─────────────────────────────────────────────────────────────
+
+enum EPlayerMissionStatus {
+  ACTIVE
+  COMPLETED
+  FAILED
+  ABANDONED
+
+  @@map("player_mission_status")
+}
+
+model PlayerMissionState {
+  id             String               @id @default(uuid())
+  playerId       String               @map("player_id")
+  missionId      String               @map("mission_id")
+  organizationId String               @map("organization_id")
+  versionHash    String               @map("version_hash")
+  currentNode    String               @map("current_node")
+  status         EPlayerMissionStatus @default(ACTIVE)
+  nodeStates     Json                 @map("node_states")
+  startedAt      DateTime             @default(now()) @map("started_at")
+  completedAt    DateTime?            @map("completed_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+
+  @@unique([playerId, missionId])
+  @@index([organizationId, missionId])
+  @@index([playerId])
+  @@map("player_mission_states")
+}

@@ -6,11 +6,14 @@ const orgId = '11111111-1111-4111-8111-111111111111';
 const authorId = '22222222-2222-4222-8222-222222222222';
 const validHash = 'a'.repeat(64);
 
+const workspaceId = '33333333-3333-4333-8333-333333333333';
+
 const makeMission = (withActive = true) => {
   const m = Mission.create({
     id: 'qst_old_country',
     name: 'Old',
     organizationId: orgId,
+    workspaceId,
     authorId,
   });
   if (withActive) m.publish(validHash);
