@@ -1,7 +1,7 @@
 import BaseUseCase from '@/modules/@shared/usecase/base.usecase';
 import { ApiHideProperty, ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsString, IsUUID, Length } from 'class-validator';
-import { EMissionStatus } from '@prisma/client';
+import { MissionStatus } from '@/modules/@shared/domain/enums/mission-status.enum';
 
 export class PublishInputDto {
   @ApiProperty({ description: 'Target mission id', example: 'qst_old_country' })
@@ -25,7 +25,7 @@ export class PublishInputDto {
 export interface PublishOutputDto {
   id: string;
   name: string;
-  status: EMissionStatus;
+  status: MissionStatus;
   activeHash: string;
   updatedAt: Date;
 }

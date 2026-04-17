@@ -1,4 +1,4 @@
-import { EMissionStatus } from '@prisma/client';
+import { MissionStatus } from '@/modules/@shared/domain/enums';
 import MissionValidatorFactory from './validators/mission.validator';
 import BaseEntity from '@/modules/@shared/domain/entity/base.entity';
 import { EntityValidationError } from '@/modules/@shared/domain/errors/validation.error';
@@ -9,7 +9,7 @@ export interface MissionProps {
   id: string;
   name: string;
   description?: string;
-  status?: EMissionStatus;
+  status?: MissionStatus;
   activeHash?: string;
   organizationId: string;
   workspaceId: string;
@@ -23,7 +23,7 @@ export interface MissionProps {
 export class Mission extends BaseEntity {
   private _name: string;
   private _description?: string;
-  private _status: EMissionStatus;
+  private _status: MissionStatus;
   private _activeHash?: string;
   private _organizationId: string;
   private _workspaceId: string;
@@ -39,7 +39,7 @@ export class Mission extends BaseEntity {
     );
     this._name = props.name;
     this._description = props.description;
-    this._status = props.status ?? EMissionStatus.DRAFT;
+    this._status = props.status ?? MissionStatus.DRAFT;
     this._activeHash = props.activeHash;
     this._organizationId = props.organizationId;
     this._workspaceId = props.workspaceId;
@@ -54,7 +54,7 @@ export class Mission extends BaseEntity {
     return this._description;
   }
 
-  get status(): EMissionStatus {
+  get status(): MissionStatus {
     return this._status;
   }
 
@@ -84,7 +84,7 @@ export class Mission extends BaseEntity {
     this.update();
   }
 
-  changeStatus(status: EMissionStatus): void {
+  changeStatus(status: MissionStatus): void {
     this._status = status;
     this.update();
   }
@@ -103,7 +103,7 @@ export class Mission extends BaseEntity {
 
   publish(hash: string): void {
     this._activeHash = hash;
-    this._status = EMissionStatus.APPROVED;
+    this._status = MissionStatus.APPROVED;
     this.update();
 
     this.addEvent(

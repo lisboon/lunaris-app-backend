@@ -1,8 +1,8 @@
-import { EMissionStatus } from '@prisma/client';
 import { Mission } from '../../domain/mission.entity';
 import { EntityValidationError } from '@/modules/@shared/domain/errors/validation.error';
 import { MissionCreatedEvent } from '../../event/mission-created.event';
 import { MissionPublishedEvent } from '../../event/mission-published.event';
+import { MissionStatus } from '@/modules/@shared/domain/enums/mission-status.enum';
 
 const validProps = () => ({
   id: 'qst_old_country',
@@ -18,7 +18,7 @@ describe('Mission', () => {
       const m = Mission.create(validProps());
       expect(m.id).toBe('qst_old_country');
       expect(m.name).toBe('The Old Country');
-      expect(m.status).toBe(EMissionStatus.DRAFT);
+      expect(m.status).toBe(MissionStatus.DRAFT);
       expect(m.activeHash).toBeUndefined();
       expect(m.active).toBe(true);
     });
@@ -77,7 +77,7 @@ describe('Mission', () => {
       m.publish('a'.repeat(64));
 
       expect(m.activeHash).toBe('a'.repeat(64));
-      expect(m.status).toBe(EMissionStatus.APPROVED);
+      expect(m.status).toBe(MissionStatus.APPROVED);
       const events = m.pullEvents();
       expect(events).toHaveLength(1);
       expect(events[0]).toBeInstanceOf(MissionPublishedEvent);
@@ -109,7 +109,7 @@ describe('Mission', () => {
         id: 'qst_old_country',
         name: 'The Old Country',
         description: null,
-        status: EMissionStatus.DRAFT,
+        status: MissionStatus.DRAFT,
         activeHash: null,
         organizationId: validProps().organizationId,
         authorId: validProps().authorId,

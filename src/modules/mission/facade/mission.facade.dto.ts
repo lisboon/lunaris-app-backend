@@ -1,4 +1,4 @@
-import { EMissionStatus } from '@prisma/client';
+import { MissionStatus } from '@/modules/@shared/domain/enums';
 import {
   CanvasGraph,
   DAGValidationErrors,
@@ -9,7 +9,7 @@ export interface MissionDto {
   id: string;
   name: string;
   description: string | null;
-  status: EMissionStatus;
+  status: MissionStatus;
   activeHash: string | null;
   organizationId: string;
   workspaceId: string;
@@ -69,7 +69,7 @@ export interface PublishFacadeInputDto {
 export interface PublishFacadeOutputDto {
   id: string;
   name: string;
-  status: EMissionStatus;
+  status: MissionStatus;
   activeHash: string;
   updatedAt: Date;
 }

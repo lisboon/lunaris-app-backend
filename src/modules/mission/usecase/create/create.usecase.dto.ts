@@ -12,7 +12,7 @@ import {
   Length,
   Matches,
 } from 'class-validator';
-import { EMissionStatus } from '@prisma/client';
+import { MissionStatus } from '@/modules/@shared/domain/enums';
 
 export class CreateUseCaseInputDto {
   @ApiProperty({
@@ -65,7 +65,7 @@ export interface CreateUseCaseOutputDto {
   id: string;
   name: string;
   description: string | null;
-  status: EMissionStatus;
+  status: MissionStatus;
   activeHash: string | null;
   organizationId: string;
   workspaceId: string;
