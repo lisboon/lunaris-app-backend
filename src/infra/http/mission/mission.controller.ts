@@ -62,8 +62,6 @@ export class MissionController {
     return this.missionService.saveVersion({
       graphData: body.graphData,
       missionData: body.missionData,
-      isValid: body.isValid,
-      validationErrors: body.validationErrors,
       missionId,
       organizationId: req.user.organizationId,
       authorId: req.user.memberId,
