@@ -18,6 +18,7 @@ import {
   DAGValidationErrors,
   MissionContract,
 } from '../types/mission.types';
+import { MissionStatus } from '@/modules/@shared/domain/enums/mission-status.enum';
 
 type PrismaJson = Prisma.JsonValue;
 
@@ -33,7 +34,7 @@ export class MissionRepository implements MissionGateway {
       id: prismaRow.id,
       name: prismaRow.name,
       description: prismaRow.description ?? undefined,
-      status: prismaRow.status,
+      status: prismaRow.status as MissionStatus,
       activeHash: prismaRow.activeHash ?? undefined,
       organizationId: prismaRow.organizationId,
       workspaceId: prismaRow.workspaceId,
