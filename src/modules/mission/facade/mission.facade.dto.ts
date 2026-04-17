@@ -49,8 +49,6 @@ export interface SaveVersionFacadeInputDto {
   authorId: string;
   graphData: CanvasGraph;
   missionData: MissionContract;
-  isValid: boolean;
-  validationErrors?: DAGValidationErrors | null;
 }
 export interface SaveVersionFacadeOutputDto {
   id: string;

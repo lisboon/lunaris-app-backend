@@ -3,6 +3,7 @@ import {
   MissionVersionPersistData,
 } from '../../gateway/mission.gateway';
 import { MissionHashService } from '../../domain/services/mission-hash.service';
+import { DAGValidatorService } from '../../domain/services/dag-validator.service';
 import { FindByIdUseCaseInterface } from '../find-by-id/find-by-id.usecase.dto';
 import {
   SaveVersionInputDto,
@@ -15,6 +16,7 @@ export default class SaveVersionUseCase implements SaveVersionUseCaseInterface {
     private readonly missionRepository: MissionGateway,
     private readonly findByIdUseCase: FindByIdUseCaseInterface,
     private readonly hashService: MissionHashService,
+    private readonly dagValidator: DAGValidatorService,
   ) {}
 
   async execute(input: SaveVersionInputDto): Promise<SaveVersionOutputDto> {
@@ -23,6 +25,7 @@ export default class SaveVersionUseCase implements SaveVersionUseCaseInterface {
       organizationId: input.organizationId,
     });
 
+    const validation = this.dagValidator.validate(input.graphData);
     const hash = this.hashService.compute(input.missionData);
 
     const versionPersistData: MissionVersionPersistData = {
@@ -31,8 +34,8 @@ export default class SaveVersionUseCase implements SaveVersionUseCaseInterface {
       hash,
       graphData: input.graphData,
       missionData: input.missionData,
-      isValid: input.isValid,
-      validationErrors: input.validationErrors ?? null,
+      isValid: validation.isValid,
+      validationErrors: validation.errors.length > 0 ? validation.errors : null,
       authorId: input.authorId,
     };
 

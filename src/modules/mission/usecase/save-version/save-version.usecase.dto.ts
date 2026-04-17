@@ -1,6 +1,6 @@
 import BaseUseCase from '@/modules/@shared/usecase/base.usecase';
 import { ApiHideProperty, ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsNotEmpty, IsObject, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsNotEmpty, IsObject, IsString, IsUUID } from 'class-validator';
 import {
   CanvasGraph,
   DAGValidationErrors,
@@ -28,18 +28,6 @@ export class SaveVersionInputDto {
   @ApiProperty({ description: 'Compiled runtime mission contract' })
   @IsObject({ message: 'The missionData must be an object' })
   missionData: MissionContract;
-
-  @ApiProperty({ description: 'Whether the graph passed DAG validation' })
-  @IsBoolean({ message: 'The isValid flag must be a boolean' })
-  isValid: boolean;
-
-  @ApiProperty({
-    description: 'DAG validation errors, when isValid=false',
-    required: false,
-    nullable: true,
-  })
-  @IsOptional()
-  validationErrors?: DAGValidationErrors | null;
 }
 
 export interface SaveVersionOutputDto {

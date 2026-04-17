@@ -10,6 +10,7 @@ import GetActiveUseCase from '../usecase/get-active/get-active.usecase';
 import MissionFacade from '../facade/mission.facade';
 import { MissionRepository } from '../repository/mission.repository';
 import { MissionHashService } from '../domain/services/mission-hash.service';
+import { DAGValidatorService } from '../domain/services/dag-validator.service';
 
 export default class MissionFacadeFactory {
   static create(eventDispatcher?: EventDispatcherInterface): MissionFacade {
@@ -19,10 +20,12 @@ export default class MissionFacadeFactory {
     const findByIdUseCase = new FindByIdUseCase(repository);
     const createUseCase = new CreateUseCase(repository, eventDispatcher);
     const updateUseCase = new UpdateUseCase(repository, findByIdUseCase);
+    const dagValidator = new DAGValidatorService();
     const saveVersionUseCase = new SaveVersionUseCase(
       repository,
       findByIdUseCase,
       hashService,
+      dagValidator,
     );
     const publishUseCase = new PublishUseCase(
       repository,
