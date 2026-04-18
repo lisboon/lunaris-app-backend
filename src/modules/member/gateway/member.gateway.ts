@@ -7,6 +7,6 @@ export interface MemberGateway {
   findByUserId(userId: string): Promise<Member | null>;
   findByOrganization(organizationId: string): Promise<Member[]>;
   create(member: Member, trx?: TransactionContext): Promise<void>;
-  update(member: Member): Promise<void>;
-  countAdmins(organizationId: string): Promise<number>;
+  update(member: Member, trx?: TransactionContext): Promise<void>;
+  countAdmins(organizationId: string, trx?: TransactionContext): Promise<number>;
 }

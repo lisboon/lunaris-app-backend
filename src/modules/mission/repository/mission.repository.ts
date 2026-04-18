@@ -13,12 +13,12 @@ import {
 } from '../gateway/mission.gateway';
 
 import { NotFoundError } from '@/modules/@shared/domain/errors/not-found.error';
+import { MissionStatus } from '@/modules/@shared/domain/enums';
 import {
   CanvasGraph,
   DAGValidationErrors,
   MissionContract,
 } from '../types/mission.types';
-import { MissionStatus } from '@/modules/@shared/domain/enums/mission-status.enum';
 
 type PrismaJson = Prisma.JsonValue;
 

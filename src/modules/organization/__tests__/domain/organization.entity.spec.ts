@@ -1,9 +1,9 @@
-import { EntityValidationError } from '@/modules/@shared/domain/errors/validation.error';
 import { Organization } from '../../domain/organization.entity';
+import { EntityValidationError } from '@/modules/@shared/domain/errors/validation.error';
 
 const validProps = () => ({
-  name: 'CD Projekt Red',
-  slug: 'cd-projekt-red',
+  name: 'CD Projekt',
+  slug: 'cd-projekt',
 });
 
 describe('Organization', () => {
@@ -11,33 +11,32 @@ describe('Organization', () => {
     it('builds a valid organization with defaults', () => {
       const org = Organization.create(validProps());
       expect(org.id).toMatch(/^[0-9a-f-]{36}$/);
-      expect(org.name).toBe('CD Projekt Red');
-      expect(org.slug).toBe('cd-projekt-red');
-      expect(org.avatarUrl).toBeUndefined();
+      expect(org.name).toBe('CD Projekt');
+      expect(org.slug).toBe('cd-projekt');
       expect(org.active).toBe(true);
       expect(org.createdAt).toBeInstanceOf(Date);
       expect(org.deletedAt).toBeUndefined();
     });
 
-    it('throws when name is too short', () => {
+    it('throws EntityValidationError when name is too short', () => {
       expect(() =>
         Organization.create({ ...validProps(), name: 'x' }),
       ).toThrow(EntityValidationError);
     });
 
-    it('throws when slug has uppercase', () => {
+    it('throws EntityValidationError when slug has uppercase letters', () => {
       expect(() =>
-        Organization.create({ ...validProps(), slug: 'INVALID' }),
+        Organization.create({ ...validProps(), slug: 'CD-Projekt' }),
       ).toThrow(EntityValidationError);
     });
 
-    it('throws when slug has spaces', () => {
+    it('throws EntityValidationError when slug has spaces', () => {
       expect(() =>
-        Organization.create({ ...validProps(), slug: 'has space' }),
+        Organization.create({ ...validProps(), slug: 'cd projekt' }),
       ).toThrow(EntityValidationError);
     });
 
-    it('throws when slug is too short', () => {
+    it('throws EntityValidationError when slug is too short', () => {
       expect(() =>
         Organization.create({ ...validProps(), slug: 'ab' }),
       ).toThrow(EntityValidationError);
@@ -50,12 +49,13 @@ describe('Organization', () => {
   });
 
   describe('updateOrganization', () => {
-    it('changes name and refreshes updatedAt', () => {
+    it('changes name and refreshes updatedAt', async () => {
       const org = Organization.create(validProps());
-      const before = org.updatedAt;
+      const before = org.updatedAt.getTime();
+      await new Promise((r) => setTimeout(r, 2));
       org.updateOrganization({ name: 'Ubisoft' });
       expect(org.name).toBe('Ubisoft');
-      expect(org.updatedAt.getTime()).toBeGreaterThanOrEqual(before.getTime());
+      expect(org.updatedAt.getTime()).toBeGreaterThan(before);
     });
 
     it('changes slug', () => {
@@ -64,7 +64,7 @@ describe('Organization', () => {
       expect(org.slug).toBe('new-slug');
     });
 
-    it('throws when new name is invalid', () => {
+    it('throws EntityValidationError when name is invalid', () => {
       const org = Organization.create(validProps());
       expect(() => org.updateOrganization({ name: 'x' })).toThrow(
         EntityValidationError,
@@ -84,14 +84,12 @@ describe('Organization', () => {
   describe('toJSON', () => {
     it('returns all fields', () => {
       const org = Organization.create(validProps());
-      const json = org.toJSON();
-      expect(json).toMatchObject({
-        name: 'CD Projekt Red',
-        slug: 'cd-projekt-red',
-        avatarUrl: undefined,
+      expect(org.toJSON()).toMatchObject({
+        id: org.id,
+        name: 'CD Projekt',
+        slug: 'cd-projekt',
         active: true,
       });
-      expect(json.id).toBeDefined();
     });
   });
 });

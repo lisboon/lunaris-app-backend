@@ -91,7 +91,7 @@ export default abstract class BaseEntity {
     this._deletedAt = new Date();
   }
 
-  public toJSON(): BaseEntityState {
+  public toJSON(): Record<string, unknown> {
     return {
       id: this._id,
       active: this._active,

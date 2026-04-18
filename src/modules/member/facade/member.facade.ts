@@ -1,6 +1,7 @@
 import { FindByIdUseCaseInterface } from '../usecase/find-by-id/find-by-id.usecase.dto';
 import { ListByOrganizationUseCaseInterface } from '../usecase/list-by-organization/list-by-organization.usecase.dto';
 import { ChangeRoleUseCaseInterface } from '../usecase/change-role/change-role.usecase.dto';
+import { RemoveMemberUseCaseInterface } from '../usecase/remove-member/remove-member.usecase.dto';
 import {
   MemberFacadeInterface,
   FindByIdFacadeInputDto,
@@ -10,7 +11,6 @@ import {
   ChangeRoleFacadeInputDto,
   RemoveMemberFacadeInputDto,
 } from './member.facade.dto';
-import { RemoveMemberUseCaseInterface } from '../usecase/remove/remove.usecase.dto';
 
 export default class MemberFacade implements MemberFacadeInterface {
   constructor(

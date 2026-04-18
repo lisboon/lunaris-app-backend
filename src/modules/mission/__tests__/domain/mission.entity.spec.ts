@@ -1,8 +1,8 @@
+import { MissionStatus } from '@/modules/@shared/domain/enums';
 import { Mission } from '../../domain/mission.entity';
 import { EntityValidationError } from '@/modules/@shared/domain/errors/validation.error';
 import { MissionCreatedEvent } from '../../event/mission-created.event';
 import { MissionPublishedEvent } from '../../event/mission-published.event';
-import { MissionStatus } from '@/modules/@shared/domain/enums/mission-status.enum';
 
 const validProps = () => ({
   id: 'qst_old_country',

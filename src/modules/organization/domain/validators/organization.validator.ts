@@ -11,11 +11,11 @@ export class OrganizationRules {
   name: string;
 
   @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, {
-    message: 'Slug must be lowercase letters, numbers, and hyphens only',
+    message: 'Invalid slug: must be lowercase alphanumeric with hyphens',
     groups: ['create', 'slug', 'update'],
   })
   @Length(3, 63, {
-    message: 'Slug must be between 3 and 63 characters',
+    message: 'Invalid slug: must be between 3 and 63 characters',
     groups: ['create', 'slug', 'update'],
   })
   slug: string;

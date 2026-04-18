@@ -24,19 +24,23 @@ export class InviteRules {
   token: string;
 
   @IsUUID('4', {
-    message: 'Invalid organization',
+    message: 'Invalid organizationId',
     groups: ['create', 'organizationId'],
   })
   organizationId: string;
 
   @IsUUID('4', {
-    message: 'Invalid inviter',
+    message: 'Invalid invitedById',
     groups: ['create', 'invitedById'],
   })
   invitedById: string;
 
   constructor(data: Invite) {
-    Object.assign(this, data.toJSON());
+    this.email = data.email;
+    this.role = data.role;
+    this.token = data.token;
+    this.organizationId = data.organizationId;
+    this.invitedById = data.invitedById;
   }
 }
 

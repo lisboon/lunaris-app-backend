@@ -1,15 +1,16 @@
 import { UserGateway } from '../../gateway/user.gateway';
 import { MemberGateway } from '@/modules/member/gateway/member.gateway';
 import { OrganizationGateway } from '@/modules/organization/gateway/organization.gateway';
-import { BadLoginError } from '@/modules/@shared/domain/errors/bad-login.error';
-import { NotFoundError } from '@/modules/@shared/domain/errors/not-found.error';
 import { PasswordHashService } from '@/modules/@shared/domain/services/password-hash.service';
 import { JwtTokenService } from '@/modules/@shared/domain/services/jwt-token.service';
+import { BadLoginError } from '@/modules/@shared/domain/errors/bad-login.error';
+import { NotFoundError } from '@/modules/@shared/domain/errors/not-found.error';
 import { Organization } from '@/modules/organization/domain/organization.entity';
+import { Member } from '@/modules/member/domain/member.entity';
 import {
-  LoginInputDto,
-  LoginOutputDto,
+  LoginUseCaseInputDto,
   LoginUseCaseInterface,
+  LoginUseCaseOutputDto,
 } from './login.usecase.dto';
 
 export default class LoginUseCase implements LoginUseCaseInterface {
@@ -21,37 +22,37 @@ export default class LoginUseCase implements LoginUseCaseInterface {
     private readonly jwtTokenService: JwtTokenService,
   ) {}
 
-  async execute(input: LoginInputDto): Promise<LoginOutputDto> {
-    const user = await this.userGateway.findByEmail(input.email);
+  async execute(data: LoginUseCaseInputDto): Promise<LoginUseCaseOutputDto> {
+    const user = await this.userGateway.findByEmail(data.email);
     if (!user) {
       throw new BadLoginError();
     }
 
-    const passwordMatch = await this.passwordHashService.compare(
-      input.password,
+    const isPasswordValid = await this.passwordHashService.compare(
+      data.password,
       user.password,
     );
-    if (!passwordMatch) {
+    if (!isPasswordValid) {
       throw new BadLoginError();
     }
 
-    const membership = await this.memberGateway.findByUserId(user.id);
-    if (!membership) {
-      throw new NotFoundError(user.id, { name: 'Membership' });
+    const member = await this.memberGateway.findByUserId(user.id);
+    if (!member) {
+      throw new NotFoundError(user.id, Member);
     }
 
     const organization = await this.organizationGateway.findById(
-      membership.organizationId,
+      member.organizationId,
     );
     if (!organization) {
-      throw new NotFoundError(membership.organizationId, Organization);
+      throw new NotFoundError(member.organizationId, Organization);
     }
 
     const accessToken = this.jwtTokenService.sign({
       userId: user.id,
-      memberId: membership.id,
-      organizationId: membership.organizationId,
-      role: membership.role,
+      memberId: member.id,
+      organizationId: organization.id,
+      role: member.role,
     });
 
     return {
@@ -62,7 +63,7 @@ export default class LoginUseCase implements LoginUseCaseInterface {
         name: organization.name,
         slug: organization.slug,
       },
-      role: membership.role,
+      role: member.role,
     };
   }
 }

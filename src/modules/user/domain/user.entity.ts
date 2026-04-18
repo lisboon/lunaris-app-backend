@@ -50,24 +50,22 @@ export class User extends BaseEntity {
     return this._avatarUrl;
   }
 
-  changeName(name: string): void {
+  changeName(name: string) {
     this._name = name;
   }
 
-  changeEmail(email: string): void {
+  changeEmail(email: string) {
     this._email = email;
   }
 
-  changePassword(hashedPassword: string): void {
+  changePassword(hashedPassword: string) {
     this._password = hashedPassword;
     this.update();
   }
 
-  updateUser(
-    props: Partial<Pick<UserProps, 'name' | 'email' | 'avatarUrl'>>,
-  ): void {
-    if (props.name !== undefined) this._name = props.name;
-    if (props.email !== undefined) this._email = props.email;
+  updateUser(props: Partial<Pick<UserProps, 'name' | 'email' | 'avatarUrl'>>) {
+    if (props.name !== undefined) this.changeName(props.name);
+    if (props.email !== undefined) this.changeEmail(props.email);
     if (props.avatarUrl !== undefined) this._avatarUrl = props.avatarUrl;
 
     this.update();

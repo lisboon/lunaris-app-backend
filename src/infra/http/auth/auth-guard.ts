@@ -2,11 +2,13 @@ import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 import { UnauthorizedError } from '@/modules/@shared/domain/errors/unauthorized.error';
+import { MemberRole } from '@/modules/@shared/domain/enums';
 
 export interface JwtPayload {
+  userId: string;
   memberId: string;
   organizationId: string;
-  role: 'ADMIN' | 'DESIGNER' | 'VIEWER';
+  role: MemberRole;
 }
 
 @Injectable()

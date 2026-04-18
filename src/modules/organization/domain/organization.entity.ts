@@ -43,19 +43,17 @@ export class Organization extends BaseEntity {
     return this._avatarUrl;
   }
 
-  changeName(name: string): void {
+  changeName(name: string) {
     this._name = name;
   }
 
-  changeSlug(slug: string): void {
+  changeSlug(slug: string) {
     this._slug = slug;
   }
 
-  updateOrganization(
-    props: Partial<Pick<OrganizationProps, 'name' | 'slug' | 'avatarUrl'>>,
-  ): void {
-    if (props.name !== undefined) this._name = props.name;
-    if (props.slug !== undefined) this._slug = props.slug;
+  updateOrganization(props: Partial<Pick<OrganizationProps, 'name' | 'slug' | 'avatarUrl'>>) {
+    if (props.name !== undefined) this.changeName(props.name);
+    if (props.slug !== undefined) this.changeSlug(props.slug);
     if (props.avatarUrl !== undefined) this._avatarUrl = props.avatarUrl;
 
     this.update();
@@ -72,14 +70,14 @@ export class Organization extends BaseEntity {
   }
 
   static create(props: OrganizationProps): Organization {
-    const org = new Organization(props);
-    org.validate();
+    const organization = new Organization(props);
+    organization.validate();
 
-    if (org.notification.hasErrors()) {
-      throw new EntityValidationError(org.notification.toJSON());
+    if (organization.notification.hasErrors()) {
+      throw new EntityValidationError(organization.notification.toJSON());
     }
 
-    return org;
+    return organization;
   }
 
   toJSON() {

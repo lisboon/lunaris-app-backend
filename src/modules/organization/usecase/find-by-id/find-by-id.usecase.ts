@@ -7,15 +7,15 @@ import {
 } from './find-by-id.usecase.dto';
 
 export default class FindByIdUseCase implements FindByIdUseCaseInterface {
-  constructor(private readonly organizationRepository: OrganizationGateway) {}
+  constructor(private readonly organizationGateway: OrganizationGateway) {}
 
   async execute(data: FindByIdUseCaseInputDto): Promise<Organization> {
-    const org = await this.organizationRepository.findById(data.id);
+    const organization = await this.organizationGateway.findById(data.id);
 
-    if (!org) {
+    if (!organization) {
       throw new NotFoundError(data.id, Organization);
     }
 
-    return org;
+    return organization;
   }
 }

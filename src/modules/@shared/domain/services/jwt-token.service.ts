@@ -1,8 +1,10 @@
+import { MemberRole } from '../enums';
+
 export interface JwtPayloadData {
   userId: string;
   memberId: string;
   organizationId: string;
-  role: string;
+  role: MemberRole;
 }
 
 export interface JwtTokenService {

@@ -3,6 +3,8 @@ import { EntityValidationError } from '@/modules/@shared/domain/errors/validatio
 import { ForbiddenError } from '@/modules/@shared/domain/errors/forbidden.error';
 import { MemberRole, InviteStatus } from '@/modules/@shared/domain/enums';
 import InviteValidatorFactory from './validators/invite.validator';
+import { InviteCreatedEvent } from '../event/invite-created.event';
+import { InviteAcceptedEvent } from '../event/invite-accepted.event';
 
 export interface InviteProps {
   id?: string;
@@ -66,23 +68,26 @@ export class Invite extends BaseEntity {
   }
 
   isExpired(): boolean {
-    return this._expiresAt < new Date();
+    return new Date() > this._expiresAt;
   }
 
-  accept(): void {
+  accept(userId: string): void {
     if (this._status !== InviteStatus.PENDING) {
-      throw new ForbiddenError('Invite can only be accepted when PENDING');
+      throw new ForbiddenError('Invite is not pending');
     }
     if (this.isExpired()) {
       throw new ForbiddenError('Invite has expired');
     }
     this._status = InviteStatus.ACCEPTED;
     this.update();
+    this.addEvent(
+      new InviteAcceptedEvent(this._id, userId, this._organizationId),
+    );
   }
 
   cancel(): void {
     if (this._status !== InviteStatus.PENDING) {
-      throw new ForbiddenError('Invite can only be cancelled when PENDING');
+      throw new ForbiddenError('Invite is not pending');
     }
     this._status = InviteStatus.CANCELLED;
     this.update();
@@ -90,7 +95,7 @@ export class Invite extends BaseEntity {
 
   renewToken(newToken: string, newExpiresAt: Date): void {
     if (this._status !== InviteStatus.PENDING) {
-      throw new ForbiddenError('Only PENDING invites can be resent');
+      throw new ForbiddenError('Invite is not pending');
     }
     this._token = newToken;
     this._expiresAt = newExpiresAt;
@@ -110,6 +115,10 @@ export class Invite extends BaseEntity {
       throw new EntityValidationError(invite.notification.toJSON());
     }
 
+    invite.addEvent(
+      new InviteCreatedEvent(invite._id, invite._email, invite._organizationId),
+    );
+
     return invite;
   }
 
@@ -119,14 +128,11 @@ export class Invite extends BaseEntity {
       email: this._email,
       role: this._role,
       status: this._status,
-      token: this._token,
       organizationId: this._organizationId,
       invitedById: this._invitedById,
       expiresAt: this._expiresAt,
-      active: this._active,
       createdAt: this._createdAt,
       updatedAt: this._updatedAt,
-      deletedAt: this._deletedAt,
     };
   }
 }

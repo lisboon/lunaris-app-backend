@@ -105,13 +105,26 @@ Gateway returns `Mission | null`. The `FindByIdUseCase` throws `new NotFoundErro
 
 Returns `{ isValid, errors: DAGValidationError[] }` where each error has `{ nodeId, errorType, message }`.
 
-### 7. Hash = identity of a version
+### 7. DAG validation is server-side, not client-provided
+`SaveVersionUseCase` injects `DAGValidatorService` and computes `isValid` and `validationErrors` from `graphData` **before** computing the hash. The frontend cannot override validation results — the usecase always validates server-side. This prevents invalid contracts from being published to the runtime.
+
+```ts
+// Inside SaveVersionUseCase
+const validation = this.dagValidatorService.validate(input.graphData, startNodeId);
+const contract = new MissionContract(input.missionData, input.graphData);
+const hash = this.hashService.compute(contract);
+await this.missionVersionRepository.create({
+  missionId, hash, isValid: validation.isValid, validationErrors: validation.errors
+});
+```
+
+### 8. Hash = identity of a version
 `MissionHashService.compute(contract)` returns SHA-256 hex of `JSON.stringify(contract)`. Same content → same hash → runtime cache hit. Injected into `SaveVersionUseCase`.
 
-### 8. Facade DTOs are pure interfaces
+### 9. Facade DTOs are pure interfaces
 `mission.facade.dto.ts` never imports class-validator. Class-validator decorators only live in `usecase/**/*.usecase.dto.ts` (because controllers use those classes). Facade consumers get clean interfaces.
 
-### 9. `active` field aligned with BaseEntity
+### 10. `active` field aligned with BaseEntity
 The entity persists `active` on create and update. `toDomainEntity` reads `active` from the DB row. Soft-delete sets `deletedAt` + deactivates (`active = false`).
 
 ---
@@ -123,7 +136,7 @@ The entity persists `active` on create and update. `toDomainEntity` reads `activ
 | `FindByIdUseCase` | `{id, organizationId}` → `Mission` | throws `NotFoundError(id, Mission)` |
 | `CreateUseCase` | `{id, name, description?, organizationId, workspaceId, authorId}` → `MissionDto` | id must be snake_case; rejects duplicates; dispatches `MissionCreatedEvent` |
 | `UpdateUseCase` | `{id, organizationId, name?, description?}` → `void` | uses `mission.updateMission()` |
-| `SaveVersionUseCase` | `{missionId, organizationId, authorId, graphData, missionData, isValid, validationErrors?}` → `{id, missionId, hash, isValid, ...}` | computes SHA-256 hash |
+| `SaveVersionUseCase` | `{missionId, organizationId, authorId, graphData, missionData}` → `{id, missionId, hash, isValid, validationErrors, ...}` | computes SHA-256 hash; validates DAG server-side |
 | `PublishUseCase` | `{missionId, organizationId, versionHash}` → `{id, name, status, activeHash, updatedAt}` | rejects invalid versions; dispatches `MissionPublishedEvent` |
 | `ListVersionsUseCase` | `{missionId, organizationId, page?=1, perPage?=20}` → `SearchResult<MissionVersionSummaryDto>` | |
 | `GetActiveUseCase` | `{missionId, organizationId}` → `MissionContract` | throws if no active version |
@@ -169,7 +182,6 @@ The entity persists `active` on create and update. `toDomainEntity` reads `activ
 
 ## Open items (not yet in the module)
 
-- `DAGValidatorService` is currently **not wired** into `SaveVersionUseCase`. Callers pass `isValid` / `validationErrors` from outside. When you wire it, inject the service into `SaveVersionUseCase` and compute `isValid` from `graphData` inside the usecase.
 - No `DeleteUseCase` yet (soft delete via `mission.delete()` is on the entity).
 - No integration tests under `test/integration/mission/`.
 

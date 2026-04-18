@@ -47,21 +47,33 @@ Lunaris follows a Slack/Linear-style multi-tenancy model for AAA game studios.
 
 ## Conventions
 
-- Files: `[name].entity.ts`, `[name].usecase.ts`, `[name].usecase.dto.ts`, `[name].gateway.ts`, `[name].repository.ts`, `[name].facade.ts`, `[name].facade.factory.ts`
-- Class names: PascalCase with a suffix (`UserEntity`, `LoginUseCase`, `UserFacade`, `UserRepository`)
-- DTOs: `{Action}InputDto` / `{Action}OutputDto` (interfaces), `{Action}Input` / `{Action}Output` (class validators)
+- Files (por módulo):
+  - Domain: `[name].entity.ts`, `validators/[name].validator.ts`
+  - Use case: `usecase/[action]/[action].usecase.ts` + `[action].usecase.dto.ts`
+  - Gateway: `gateway/[name].gateway.ts`
+  - Repository: `repository/[name].repository.ts`
+  - Facade: `facade/[name].facade.ts` + `facade/[name].facade.dto.ts`
+  - Factory: `factory/facade.factory.ts` (um por módulo, nome fixo)
+  - Eventos: `event/[event-name].event.ts`
+- Class names: PascalCase com sufixo semântico (`User`, `LoginUseCase`, `UserFacade`, `UserRepository`, `UserFacadeFactory`). Entidades não carregam sufixo `Entity` — o nome do arquivo já é `user.entity.ts`.
+- DTOs: classes anotadas com `class-validator` que servem como tipo E validador — `{Action}UseCaseInputDto` / `{Action}UseCaseOutputDto` no use case, e `{Action}FacadeInputDto` / `{Action}FacadeOutputDto` na facade. Interfaces puras para facades são exportadas junto com as classes quando fazem sentido.
+- Exceções de tenancy em `findById`:
+  - `UserGateway.findById(id)` — `User` é global
+  - `OrganizationGateway.findById(id)` — a própria org é o tenant
 - Enums: UPPER_SNAKE_CASE
 - Path alias: `@/*` → `./src/*`
 
 ## Patterns
 
-- **Soft delete**: all entities via `deletedAt`
+- **Soft delete**: entidades tenant-scoped usam `deletedAt`. `Invite` é exceção: usa ciclo de status (`PENDING → ACCEPTED | CANCELLED`).
+- **Transações**: gateways que participam de escrita coordenada aceitam `trx?: TransactionContext`. Use cases orquestram via `TransactionManager.execute(async (trx) => ...)`.
+- **Eventos de domínio**: entidade acumula via `this.addEvent(event)`; o **use case** faz `entity.pullEvents()` e dispacha **depois** da persistência (ou depois do `transactionManager.execute` retornar). Nunca disparar de dentro da entidade.
 - **Commits**: conventional commits (commitlint + husky)
-- **Testing**: Jest + SWC, using the `makeSut()` pattern with mocks via `jest.fn()`
-- **Validation**: class-validator in DTOs, Notification pattern in entities
-- **Errors**: `NotFoundError`, `BadLoginError`, `EntityValidationError`, `ForbiddenError`, `UnauthorizedError`
-- **Guards**: `@UseGuards(AuthGuard, RolesGuard)` + `@Role({ context, level, minAdmin })`
-- **Pagination**: `SearchParams<Filter>` / `SearchResult<T>` from `@shared`
+- **Testing**: Jest + SWC, padrão `makeSut()` com `jest.fn()`; entidades testadas sem mocks, use cases mockam gateways, facade mocka use cases.
+- **Validation**: class-validator nos DTOs; Notification pattern nas entidades (coleta todos os erros antes de lançar `EntityValidationError`).
+- **Errors**: `NotFoundError`, `BadLoginError`, `EntityValidationError`, `ForbiddenError`, `UnauthorizedError`, `TokenExpiredError`.
+- **Guards**: `@UseGuards(AuthGuard, RolesGuard)` no `@Controller`, `@Roles({ role: MemberRole.X })` por rota (nível mínimo). Ver `.claude/rules/controllers.md`.
+- **Pagination**: `SearchParams<Filter>` / `SearchResult<T>` from `@shared` (camelCase: `perPage`, `sortDir`, `currentPage`, `lastPage`).
 
 
 ## Commands

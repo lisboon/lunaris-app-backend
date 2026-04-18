@@ -68,8 +68,9 @@ export default class MemberRepository implements MemberGateway {
     });
   }
 
-  async update(member: Member): Promise<void> {
-    await this.prisma.member.updateMany({
+  async update(member: Member, trx?: TransactionContext): Promise<void> {
+    const client = this.getClient(trx);
+    await client.member.updateMany({
       where: { id: member.id, organizationId: member.organizationId },
       data: {
         role: member.role,
@@ -80,11 +81,15 @@ export default class MemberRepository implements MemberGateway {
     });
   }
 
-  async countAdmins(organizationId: string): Promise<number> {
-    return this.prisma.member.count({
+  async countAdmins(
+    organizationId: string,
+    trx?: TransactionContext,
+  ): Promise<number> {
+    const client = this.getClient(trx);
+    return client.member.count({
       where: {
         organizationId,
-        role: 'ADMIN',
+        role: MemberRole.ADMIN,
         active: true,
         deletedAt: null,
       },
