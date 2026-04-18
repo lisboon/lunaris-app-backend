@@ -16,6 +16,7 @@ import { AuthGuard, JwtPayload } from '../auth/auth-guard';
 import { RolesGuard } from '../auth/roles-guard';
 import { Roles } from '../shared/roles.decorator';
 import { WorkspaceService } from './workspace.service';
+import { MemberRole } from '@/modules/@shared/domain/enums';
 import { CreateUseCaseInputDto } from '@/modules/workspace/usecase/create/create.usecase.dto';
 import { UpdateUseCaseInputDto } from '@/modules/workspace/usecase/update/update.usecase.dto';
 import { SearchUseCaseInputDto } from '@/modules/workspace/usecase/search/search.usecase.dto';
@@ -29,7 +30,7 @@ export class WorkspaceController {
 
   @Post()
   @ApiOperation({ summary: 'Create a new workspace' })
-  @Roles({ role: 'ADMIN' })
+  @Roles({ role: MemberRole.ADMIN })
   async create(
     @Request() req: { user: JwtPayload },
     @Body() body: CreateUseCaseInputDto,
@@ -42,7 +43,7 @@ export class WorkspaceController {
 
   @Get()
   @ApiOperation({ summary: 'Search workspaces in the organization' })
-  @Roles({ role: 'VIEWER' })
+  @Roles({ role: MemberRole.VIEWER })
   async search(
     @Request() req: { user: JwtPayload },
     @Query() query: SearchUseCaseInputDto,
@@ -55,7 +56,7 @@ export class WorkspaceController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get a workspace by id' })
-  @Roles({ role: 'VIEWER' })
+  @Roles({ role: MemberRole.VIEWER })
   async findById(
     @Param('id') id: string,
     @Request() req: { user: JwtPayload },
@@ -68,7 +69,7 @@ export class WorkspaceController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update a workspace' })
-  @Roles({ role: 'ADMIN' })
+  @Roles({ role: MemberRole.ADMIN })
   async update(
     @Param('id') id: string,
     @Request() req: { user: JwtPayload },
@@ -84,7 +85,7 @@ export class WorkspaceController {
   @Delete(':id')
   @HttpCode(204)
   @ApiOperation({ summary: 'Soft-delete a workspace' })
-  @Roles({ role: 'ADMIN' })
+  @Roles({ role: MemberRole.ADMIN })
   async delete(
     @Param('id') id: string,
     @Request() req: { user: JwtPayload },

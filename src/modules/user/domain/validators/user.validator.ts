@@ -23,9 +23,7 @@ export class UserRules {
   password: string;
 
   constructor(data: User) {
-    const json = data.toJSON();
-    Object.assign(this, json);
-    // password is omitted from toJSON for security, assign directly
+    Object.assign(this, data.toJSON());
     this.password = data.password;
   }
 }

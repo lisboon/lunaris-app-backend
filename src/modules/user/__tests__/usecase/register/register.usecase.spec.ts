@@ -1,24 +1,28 @@
 import RegisterUseCase from '../../../usecase/register/register.usecase';
 import { EntityValidationError } from '@/modules/@shared/domain/errors/validation.error';
+import { MemberRole } from '@/modules/@shared/domain/enums';
 
 const validInput = () => ({
-  email: 'john@studio.com',
-  name: 'John Doe',
-  password: 'secureP@ss123',
-  organizationName: 'CD Projekt Red',
-  organizationSlug: 'cd-projekt-red',
+  email: 'founder@studio.io',
+  name: 'Jane Founder',
+  password: 'SuperSecret99',
+  organizationName: 'CD Projekt',
+  organizationSlug: 'cd-projekt',
 });
 
-const makeSut = () => {
+const makeSut = ({
+  existingUserByEmail = null,
+  existingOrgBySlug = null,
+} = {}) => {
   const transactionManager = {
-    execute: jest.fn().mockImplementation((fn) => fn({})),
+    execute: jest.fn().mockImplementation(async (fn: any) => fn({})),
   };
   const userGateway = {
-    findByEmail: jest.fn().mockResolvedValue(null),
+    findByEmail: jest.fn().mockResolvedValue(existingUserByEmail),
     create: jest.fn().mockResolvedValue(undefined),
   };
   const organizationGateway = {
-    findBySlug: jest.fn().mockResolvedValue(null),
+    findBySlug: jest.fn().mockResolvedValue(existingOrgBySlug),
     create: jest.fn().mockResolvedValue(undefined),
   };
   const memberGateway = {
@@ -26,7 +30,6 @@ const makeSut = () => {
   };
   const passwordHashService = {
     hash: jest.fn().mockResolvedValue('hashed_password'),
-    compare: jest.fn(),
   };
 
   const useCase = new RegisterUseCase(
@@ -49,42 +52,48 @@ const makeSut = () => {
 
 describe('RegisterUseCase', () => {
   it('creates user, organization, and member atomically', async () => {
-    const { useCase, transactionManager, userGateway, organizationGateway, memberGateway } = makeSut();
+    const {
+      useCase,
+      transactionManager,
+      userGateway,
+      organizationGateway,
+      memberGateway,
+      passwordHashService,
+    } = makeSut();
 
     const output = await useCase.execute(validInput());
 
+    expect(passwordHashService.hash).toHaveBeenCalledWith('SuperSecret99');
     expect(transactionManager.execute).toHaveBeenCalledTimes(1);
     expect(userGateway.create).toHaveBeenCalledTimes(1);
     expect(organizationGateway.create).toHaveBeenCalledTimes(1);
     expect(memberGateway.create).toHaveBeenCalledTimes(1);
 
-    expect(output.user.email).toBe('john@studio.com');
-    expect(output.user.name).toBe('John Doe');
-    expect(output.organization.name).toBe('CD Projekt Red');
-    expect(output.organization.slug).toBe('cd-projekt-red');
-    expect(output.member.role).toBe('ADMIN');
+    expect(output.user).toMatchObject({
+      email: 'founder@studio.io',
+      name: 'Jane Founder',
+    });
+    expect(output.organization).toMatchObject({
+      name: 'CD Projekt',
+      slug: 'cd-projekt',
+    });
+    expect(output.member.role).toBe(MemberRole.ADMIN);
   });
 
-  it('hashes the password before creating the user', async () => {
-    const { useCase, passwordHashService } = makeSut();
-
-    await useCase.execute(validInput());
-
-    expect(passwordHashService.hash).toHaveBeenCalledWith('secureP@ss123');
-  });
-
-  it('throws when email already exists', async () => {
+  it('throws EntityValidationError when email is already taken', async () => {
     const { useCase, userGateway } = makeSut();
-    userGateway.findByEmail.mockResolvedValue({ id: 'existing' });
+    const existingUser = { id: 'some-id', email: 'founder@studio.io' };
+    userGateway.findByEmail.mockResolvedValue(existingUser);
 
     await expect(useCase.execute(validInput())).rejects.toBeInstanceOf(
       EntityValidationError,
     );
   });
 
-  it('throws when organization slug already exists', async () => {
+  it('throws EntityValidationError when slug is already taken', async () => {
     const { useCase, organizationGateway } = makeSut();
-    organizationGateway.findBySlug.mockResolvedValue({ id: 'existing' });
+    const existingOrg = { id: 'some-id', slug: 'cd-projekt' };
+    organizationGateway.findBySlug.mockResolvedValue(existingOrg);
 
     await expect(useCase.execute(validInput())).rejects.toBeInstanceOf(
       EntityValidationError,

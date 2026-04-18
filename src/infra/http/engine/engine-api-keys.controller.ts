@@ -12,6 +12,7 @@ import {
 import { AuthGuard, JwtPayload } from '../auth/auth-guard';
 import { RolesGuard } from '../auth/roles-guard';
 import { Roles } from '../shared/roles.decorator';
+import { MemberRole } from '@/modules/@shared/domain/enums';
 import { EngineApiKeysService } from './engine-api-keys.service';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CreateUseCaseInputDto } from '@/modules/engine/usecase/create/create.usecase.dto';
@@ -28,7 +29,7 @@ export class EngineApiKeysController {
     summary:
       'Create an API Key for the Unreal plugin — returns the raw key once',
   })
-  @Roles({ role: 'ADMIN' })
+  @Roles({ role: MemberRole.ADMIN })
   async create(
     @Request() req: { user: JwtPayload },
     @Body() body: CreateUseCaseInputDto,
@@ -42,7 +43,7 @@ export class EngineApiKeysController {
 
   @Get()
   @ApiOperation({ summary: "List the organization's API Keys" })
-  @Roles({ role: 'ADMIN' })
+  @Roles({ role: MemberRole.ADMIN })
   async search(@Request() req: { user: JwtPayload }) {
     return this.engineApiKeysService.search({
       organizationId: req.user.organizationId,
@@ -52,7 +53,7 @@ export class EngineApiKeysController {
   @Delete(':id')
   @HttpCode(204)
   @ApiOperation({ summary: 'Revoke an API Key' })
-  @Roles({ role: 'ADMIN' })
+  @Roles({ role: MemberRole.ADMIN })
   async revoke(@Param('id') id: string, @Request() req: { user: JwtPayload }) {
     await this.engineApiKeysService.revoke({
       id,

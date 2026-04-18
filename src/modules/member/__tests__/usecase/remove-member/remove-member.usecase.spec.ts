@@ -1,7 +1,7 @@
+import RemoveMemberUseCase from '../../../usecase/remove-member/remove-member.usecase';
 import { ForbiddenError } from '@/modules/@shared/domain/errors/forbidden.error';
 import { Member } from '../../../domain/member.entity';
 import { MemberRole } from '@/modules/@shared/domain/enums';
-import RemoveMemberUseCase from '@/modules/member/usecase/remove/remove.usecase';
 
 const ORG_ID = '11111111-1111-4111-8111-111111111111';
 
@@ -27,11 +27,15 @@ const makeSut = (member: Member, adminCount: number = 2) => {
   const findByIdUseCase = {
     execute: jest.fn().mockResolvedValue(member),
   };
+  const transactionManager = {
+    execute: jest.fn().mockImplementation(async (fn: any) => fn({ trx: true })),
+  };
   const useCase = new RemoveMemberUseCase(
     memberGateway as any,
     findByIdUseCase as any,
+    transactionManager as any,
   );
-  return { useCase, memberGateway, findByIdUseCase };
+  return { useCase, memberGateway, findByIdUseCase, transactionManager };
 };
 
 describe('RemoveMemberUseCase', () => {
@@ -52,7 +56,10 @@ describe('RemoveMemberUseCase', () => {
 
     await useCase.execute({ id: member.id, organizationId: ORG_ID });
 
-    expect(memberGateway.countAdmins).toHaveBeenCalledWith(ORG_ID);
+    expect(memberGateway.countAdmins).toHaveBeenCalledWith(
+      ORG_ID,
+      expect.objectContaining({ trx: true }),
+    );
     expect(memberGateway.update).toHaveBeenCalledTimes(1);
     expect(member.deletedAt).toBeDefined();
   });
@@ -66,5 +73,18 @@ describe('RemoveMemberUseCase', () => {
     ).rejects.toBeInstanceOf(ForbiddenError);
 
     expect(memberGateway.update).not.toHaveBeenCalled();
+  });
+
+  it('runs countAdmins and update inside the same transaction', async () => {
+    const member = adminMember();
+    const { useCase, memberGateway, transactionManager } = makeSut(member, 2);
+
+    await useCase.execute({ id: member.id, organizationId: ORG_ID });
+
+    expect(transactionManager.execute).toHaveBeenCalledTimes(1);
+    expect(memberGateway.update).toHaveBeenCalledWith(
+      member,
+      expect.objectContaining({ trx: true }),
+    );
   });
 });

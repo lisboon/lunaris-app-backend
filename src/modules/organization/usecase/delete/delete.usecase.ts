@@ -7,13 +7,15 @@ import {
 
 export default class DeleteUseCase implements DeleteUseCaseInterface {
   constructor(
-    private readonly organizationRepository: OrganizationGateway,
+    private readonly organizationGateway: OrganizationGateway,
     private readonly findByIdUseCase: FindByIdUseCaseInterface,
   ) {}
 
   async execute(input: DeleteUseCaseInputDto): Promise<void> {
-    const org = await this.findByIdUseCase.execute({ id: input.id });
-    org.delete();
-    await this.organizationRepository.update(org);
+    const organization = await this.findByIdUseCase.execute({ id: input.id });
+
+    organization.delete();
+
+    await this.organizationGateway.update(organization);
   }
 }

@@ -14,6 +14,7 @@ import { MissionService } from './mission.service';
 import { AuthGuard, JwtPayload } from '../auth/auth-guard';
 import { RolesGuard } from '../auth/roles-guard';
 import { Roles } from '../shared/roles.decorator';
+import { MemberRole } from '@/modules/@shared/domain/enums';
 import { CreateUseCaseInputDto } from '@/modules/mission/usecase/create/create.usecase.dto';
 import { SaveVersionInputDto } from '@/modules/mission/usecase/save-version/save-version.usecase.dto';
 import { PublishInputDto } from '@/modules/mission/usecase/publish/publish.usecase.dto';
@@ -33,7 +34,7 @@ export class MissionController {
 
   @Post()
   @ApiOperation({ summary: 'Create a new mission (initial status: DRAFT)' })
-  @Roles({ role: 'DESIGNER' })
+  @Roles({ role: MemberRole.DESIGNER })
   async create(
     @Param('workspaceId') workspaceId: string,
     @Request() req: { user: JwtPayload },
@@ -53,7 +54,7 @@ export class MissionController {
   @ApiOperation({
     summary: 'Save a new mission version — computes SHA-256 of missionData',
   })
-  @Roles({ role: 'DESIGNER' })
+  @Roles({ role: MemberRole.DESIGNER })
   async saveVersion(
     @Param('id') missionId: string,
     @Request() req: { user: JwtPayload },
@@ -73,7 +74,7 @@ export class MissionController {
   @ApiOperation({
     summary: 'Publish a version as active — runtime starts serving this hash',
   })
-  @Roles({ role: 'DESIGNER' })
+  @Roles({ role: MemberRole.DESIGNER })
   async publish(
     @Param('id') missionId: string,
     @Request() req: { user: JwtPayload },
@@ -92,7 +93,7 @@ export class MissionController {
   })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
   @ApiQuery({ name: 'perPage', required: false, type: Number, example: 10 })
-  @Roles({ role: 'VIEWER' })
+  @Roles({ role: MemberRole.VIEWER })
   async listVersions(
     @Param('id') missionId: string,
     @Request() req: { user: JwtPayload },
@@ -112,7 +113,7 @@ export class MissionController {
     summary:
       'Return the compiled missionData of the currently published version',
   })
-  @Roles({ role: 'VIEWER' })
+  @Roles({ role: MemberRole.VIEWER })
   async getActive(
     @Param('id') missionId: string,
     @Request() req: { user: JwtPayload },

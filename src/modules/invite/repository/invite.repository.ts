@@ -1,10 +1,15 @@
 import { PrismaClient } from '@prisma/client';
 import { InviteGateway } from '../gateway/invite.gateway';
 import { Invite } from '../domain/invite.entity';
-import { InviteStatus, MemberRole } from '@/modules/@shared/domain/enums';
+import { MemberRole, InviteStatus } from '@/modules/@shared/domain/enums';
+import { TransactionContext } from '@/modules/@shared/domain/transaction/transaction-manager.interface';
 
 export default class InviteRepository implements InviteGateway {
   constructor(private readonly prisma: PrismaClient) {}
+
+  private getClient(trx?: TransactionContext): PrismaClient {
+    return (trx as PrismaClient) ?? this.prisma;
+  }
 
   private toEntity(data: any): Invite {
     return new Invite({
@@ -35,12 +40,9 @@ export default class InviteRepository implements InviteGateway {
     return row ? this.toEntity(row) : null;
   }
 
-  async findByEmailAndOrg(
-    email: string,
-    organizationId: string,
-  ): Promise<Invite | null> {
+  async findByEmailAndOrg(email: string, organizationId: string): Promise<Invite | null> {
     const row = await this.prisma.invite.findFirst({
-      where: { email, organizationId, status: 'PENDING' },
+      where: { email, organizationId, status: InviteStatus.PENDING },
     });
     return row ? this.toEntity(row) : null;
   }
@@ -53,8 +55,9 @@ export default class InviteRepository implements InviteGateway {
     return rows.map((row) => this.toEntity(row));
   }
 
-  async create(invite: Invite): Promise<void> {
-    await this.prisma.invite.create({
+  async create(invite: Invite, trx?: TransactionContext): Promise<void> {
+    const client = this.getClient(trx);
+    await client.invite.create({
       data: {
         id: invite.id,
         email: invite.email,
@@ -70,9 +73,10 @@ export default class InviteRepository implements InviteGateway {
     });
   }
 
-  async update(invite: Invite): Promise<void> {
-    await this.prisma.invite.update({
-      where: { id: invite.id },
+  async update(invite: Invite, trx?: TransactionContext): Promise<void> {
+    const client = this.getClient(trx);
+    await client.invite.updateMany({
+      where: { id: invite.id, organizationId: invite.organizationId },
       data: {
         status: invite.status,
         token: invite.token,

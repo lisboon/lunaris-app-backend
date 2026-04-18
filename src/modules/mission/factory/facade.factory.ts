@@ -16,11 +16,11 @@ export default class MissionFacadeFactory {
   static create(eventDispatcher?: EventDispatcherInterface): MissionFacade {
     const repository = new MissionRepository(prisma);
     const hashService = new MissionHashService();
+    const dagValidator = new DAGValidatorService();
 
     const findByIdUseCase = new FindByIdUseCase(repository);
     const createUseCase = new CreateUseCase(repository, eventDispatcher);
     const updateUseCase = new UpdateUseCase(repository, findByIdUseCase);
-    const dagValidator = new DAGValidatorService();
     const saveVersionUseCase = new SaveVersionUseCase(
       repository,
       findByIdUseCase,

@@ -1,24 +1,34 @@
 import FindByIdUseCase from '../../../usecase/find-by-id/find-by-id.usecase';
-import { Organization } from '../../../domain/organization.entity';
 import { NotFoundError } from '@/modules/@shared/domain/errors/not-found.error';
+import { Organization } from '../../../domain/organization.entity';
 
-const makeSut = () => {
-  const org = Organization.create({ name: 'CD Projekt Red', slug: 'cd-projekt-red' });
-  const repository = { findById: jest.fn().mockResolvedValue(org) };
-  const useCase = new FindByIdUseCase(repository as any);
-  return { useCase, repository, org };
+const validOrganization = () =>
+  Organization.create({ name: 'CD Projekt', slug: 'cd-projekt' });
+
+const makeSut = (organization: Organization | null = null) => {
+  const organizationGateway = {
+    findById: jest.fn().mockResolvedValue(organization),
+  };
+  const useCase = new FindByIdUseCase(organizationGateway as any);
+  return { useCase, organizationGateway };
 };
 
-describe('FindByIdUseCase (Organization)', () => {
+describe('FindByIdOrganizationUseCase', () => {
   it('returns the organization when found', async () => {
-    const { useCase, org } = makeSut();
-    const result = await useCase.execute({ id: org.id });
-    expect(result.slug).toBe('cd-projekt-red');
+    const organization = validOrganization();
+    const { useCase, organizationGateway } = makeSut(organization);
+
+    const result = await useCase.execute({ id: organization.id });
+
+    expect(organizationGateway.findById).toHaveBeenCalledWith(organization.id);
+    expect(result).toBe(organization);
   });
 
-  it('throws NotFoundError when not found', async () => {
-    const { useCase, repository } = makeSut();
-    repository.findById.mockResolvedValue(null);
-    await expect(useCase.execute({ id: 'bad' })).rejects.toBeInstanceOf(NotFoundError);
+  it('throws NotFoundError when organization does not exist', async () => {
+    const { useCase } = makeSut(null);
+
+    await expect(
+      useCase.execute({ id: '00000000-0000-4000-8000-000000000000' }),
+    ).rejects.toBeInstanceOf(NotFoundError);
   });
 });

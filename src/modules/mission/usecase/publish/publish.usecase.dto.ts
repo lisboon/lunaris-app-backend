@@ -1,7 +1,7 @@
 import BaseUseCase from '@/modules/@shared/usecase/base.usecase';
 import { ApiHideProperty, ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsString, IsUUID, Length } from 'class-validator';
-import { MissionStatus } from '@/modules/@shared/domain/enums/mission-status.enum';
+import { MissionStatus } from '@/modules/@shared/domain/enums';
 
 export class PublishInputDto {
   @ApiProperty({ description: 'Target mission id', example: 'qst_old_country' })

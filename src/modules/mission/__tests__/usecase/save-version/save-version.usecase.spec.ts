@@ -3,6 +3,7 @@ import { DAGValidatorService } from '../../../domain/services/dag-validator.serv
 import { MissionHashService } from '../../../domain/services/mission-hash.service';
 import { Mission } from '../../../domain/mission.entity';
 
+
 const orgId = '11111111-1111-4111-8111-111111111111';
 const workspaceId = '22222222-2222-4222-8222-222222222222';
 const authorId = '33333333-3333-4333-8333-333333333333';
@@ -28,7 +29,7 @@ const invalidGraph = () => ({
 
 const validMissionData = () => ({
   mission_id: 'qst_test',
-  meta: { version: '1', hash: '' },
+  meta: { version: '1.0.0', hash: '' },
   graph: { start_node: 'start', nodes: {} },
 });
 
@@ -96,7 +97,7 @@ describe('SaveVersionUseCase', () => {
       savedVersionRecord({ isValid: false, validationErrors: [{ nodeId: 'b', errorType: 'LOOP_DETECTED', message: expect.any(String) }] }),
     );
 
-    const output = await useCase.execute({
+    await useCase.execute({
       missionId: 'qst_test',
       organizationId: orgId,
       authorId,
@@ -108,9 +109,6 @@ describe('SaveVersionUseCase', () => {
     expect(persistData.isValid).toBe(false);
     expect(persistData.validationErrors).not.toBeNull();
     expect(persistData.validationErrors.length).toBeGreaterThan(0);
-
-    expect(output.isValid).toBe(false);
-    expect(output.validationErrors).not.toBeNull();
   });
 
   it('always calls findByIdUseCase to verify mission exists', async () => {

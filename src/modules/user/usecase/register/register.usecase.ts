@@ -1,17 +1,17 @@
 import { UserGateway } from '../../gateway/user.gateway';
-import { OrganizationGateway } from '@/modules/organization/gateway/organization.gateway';
-import { MemberGateway } from '@/modules/member/gateway/member.gateway';
 import { User } from '../../domain/user.entity';
 import { Organization } from '@/modules/organization/domain/organization.entity';
 import { Member } from '@/modules/member/domain/member.entity';
-import { MemberRole } from '@/modules/@shared/domain/enums';
-import { EntityValidationError } from '@/modules/@shared/domain/errors/validation.error';
+import { OrganizationGateway } from '@/modules/organization/gateway/organization.gateway';
+import { MemberGateway } from '@/modules/member/gateway/member.gateway';
 import { PasswordHashService } from '@/modules/@shared/domain/services/password-hash.service';
 import { TransactionManager } from '@/modules/@shared/domain/transaction/transaction-manager.interface';
+import { EntityValidationError } from '@/modules/@shared/domain/errors/validation.error';
+import { MemberRole } from '@/modules/@shared/domain/enums';
 import {
-  RegisterInputDto,
-  RegisterOutputDto,
+  RegisterUseCaseInputDto,
   RegisterUseCaseInterface,
+  RegisterUseCaseOutputDto,
 } from './register.usecase.dto';
 
 export default class RegisterUseCase implements RegisterUseCaseInterface {
@@ -23,34 +23,36 @@ export default class RegisterUseCase implements RegisterUseCaseInterface {
     private readonly passwordHashService: PasswordHashService,
   ) {}
 
-  async execute(input: RegisterInputDto): Promise<RegisterOutputDto> {
-    const existingUser = await this.userGateway.findByEmail(input.email);
+  async execute(
+    data: RegisterUseCaseInputDto,
+  ): Promise<RegisterUseCaseOutputDto> {
+    const existingUser = await this.userGateway.findByEmail(data.email);
     if (existingUser) {
       throw new EntityValidationError([
-        { field: 'email', message: 'Email already registered' },
+        { field: 'email', message: 'Email already in use' },
       ]);
     }
 
     const existingOrg = await this.organizationGateway.findBySlug(
-      input.organizationSlug,
+      data.organizationSlug,
     );
     if (existingOrg) {
       throw new EntityValidationError([
-        { field: 'organizationSlug', message: 'Organization slug already taken' },
+        { field: 'organizationSlug', message: 'Slug already in use' },
       ]);
     }
 
-    const hashedPassword = await this.passwordHashService.hash(input.password);
+    const hashedPassword = await this.passwordHashService.hash(data.password);
 
     const user = User.create({
-      email: input.email,
-      name: input.name,
+      email: data.email,
+      name: data.name,
       password: hashedPassword,
     });
 
     const organization = Organization.create({
-      name: input.organizationName,
-      slug: input.organizationSlug,
+      name: data.organizationName,
+      slug: data.organizationSlug,
     });
 
     const member = Member.create({

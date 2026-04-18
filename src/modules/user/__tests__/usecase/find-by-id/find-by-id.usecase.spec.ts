@@ -1,34 +1,38 @@
 import FindByIdUseCase from '../../../usecase/find-by-id/find-by-id.usecase';
-import { User } from '../../../domain/user.entity';
 import { NotFoundError } from '@/modules/@shared/domain/errors/not-found.error';
+import { User } from '../../../domain/user.entity';
 
-const makeSut = () => {
-  const user = User.create({
-    email: 'john@studio.com',
-    name: 'John Doe',
+const validUser = () =>
+  User.create({
+    email: 'player@lunaris.io',
+    name: 'Player One',
     password: 'hashed_password',
   });
-  const repository = {
+
+const makeSut = (user: User | null = null) => {
+  const userGateway = {
     findById: jest.fn().mockResolvedValue(user),
   };
-  const useCase = new FindByIdUseCase(repository as any);
-  return { useCase, repository, user };
+  const useCase = new FindByIdUseCase(userGateway as any);
+  return { useCase, userGateway };
 };
 
-describe('FindByIdUseCase (User)', () => {
+describe('FindByIdUserUseCase', () => {
   it('returns the user when found', async () => {
-    const { useCase, user } = makeSut();
+    const user = validUser();
+    const { useCase, userGateway } = makeSut(user);
+
     const result = await useCase.execute({ id: user.id });
-    expect(result.id).toBe(user.id);
-    expect(result.email).toBe('john@studio.com');
+
+    expect(userGateway.findById).toHaveBeenCalledWith(user.id);
+    expect(result).toBe(user);
   });
 
   it('throws NotFoundError when user does not exist', async () => {
-    const { useCase, repository } = makeSut();
-    repository.findById.mockResolvedValue(null);
+    const { useCase } = makeSut(null);
 
     await expect(
-      useCase.execute({ id: 'non-existent-id' }),
+      useCase.execute({ id: '00000000-0000-4000-8000-000000000000' }),
     ).rejects.toBeInstanceOf(NotFoundError);
   });
 });
