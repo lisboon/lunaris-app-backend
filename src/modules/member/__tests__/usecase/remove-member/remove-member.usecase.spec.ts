@@ -1,7 +1,7 @@
-import RemoveMemberUseCase from '../../../usecase/remove-member/remove-member.usecase';
 import { ForbiddenError } from '@/modules/@shared/domain/errors/forbidden.error';
 import { Member } from '../../../domain/member.entity';
 import { MemberRole } from '@/modules/@shared/domain/enums';
+import RemoveMemberUseCase from '@/modules/member/usecase/remove/remove.usecase';
 
 const ORG_ID = '11111111-1111-4111-8111-111111111111';
 
