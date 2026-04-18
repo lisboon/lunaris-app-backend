@@ -44,7 +44,7 @@ export class Member extends BaseEntity {
     return this._role;
   }
 
-  changeRole(role: MemberRole): void {
+  changeRole(role: MemberRole) {
     this._role = role;
     this.update();
   }

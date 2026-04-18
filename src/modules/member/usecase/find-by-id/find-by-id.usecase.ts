@@ -7,10 +7,10 @@ import {
 } from './find-by-id.usecase.dto';
 
 export default class FindByIdUseCase implements FindByIdUseCaseInterface {
-  constructor(private readonly memberRepository: MemberGateway) {}
+  constructor(private readonly memberGateway: MemberGateway) {}
 
   async execute(data: FindByIdUseCaseInputDto): Promise<Member> {
-    const member = await this.memberRepository.findById(
+    const member = await this.memberGateway.findById(
       data.id,
       data.organizationId,
     );

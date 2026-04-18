@@ -1,21 +1,22 @@
 import { MemberGateway } from '../../gateway/member.gateway';
 import {
-  ListByOrganizationInputDto,
-  ListByOrganizationOutputDto,
+  ListByOrganizationUseCaseInputDto,
   ListByOrganizationUseCaseInterface,
+  MemberSummaryDto,
 } from './list-by-organization.usecase.dto';
 
 export default class ListByOrganizationUseCase
   implements ListByOrganizationUseCaseInterface
 {
-  constructor(private readonly memberRepository: MemberGateway) {}
+  constructor(private readonly memberGateway: MemberGateway) {}
 
   async execute(
-    input: ListByOrganizationInputDto,
-  ): Promise<ListByOrganizationOutputDto> {
-    const members = await this.memberRepository.findByOrganization(
-      input.organizationId,
+    data: ListByOrganizationUseCaseInputDto,
+  ): Promise<MemberSummaryDto[]> {
+    const members = await this.memberGateway.findByOrganization(
+      data.organizationId,
     );
-    return members.map((m) => m.toJSON());
+
+    return members.map((member) => member.toJSON());
   }
 }

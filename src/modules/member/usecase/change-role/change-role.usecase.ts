@@ -1,19 +1,19 @@
 import { MemberGateway } from '../../gateway/member.gateway';
-import { MemberRole } from '@/modules/@shared/domain/enums';
-import { ForbiddenError } from '@/modules/@shared/domain/errors/forbidden.error';
 import { FindByIdUseCaseInterface } from '../find-by-id/find-by-id.usecase.dto';
+import { ForbiddenError } from '@/modules/@shared/domain/errors/forbidden.error';
+import { MemberRole } from '@/modules/@shared/domain/enums';
 import {
-  ChangeRoleInputDto,
+  ChangeRoleUseCaseInputDto,
   ChangeRoleUseCaseInterface,
 } from './change-role.usecase.dto';
 
 export default class ChangeRoleUseCase implements ChangeRoleUseCaseInterface {
   constructor(
-    private readonly memberRepository: MemberGateway,
+    private readonly memberGateway: MemberGateway,
     private readonly findByIdUseCase: FindByIdUseCaseInterface,
   ) {}
 
-  async execute(input: ChangeRoleInputDto): Promise<void> {
+  async execute(input: ChangeRoleUseCaseInputDto): Promise<void> {
     const member = await this.findByIdUseCase.execute({
       id: input.id,
       organizationId: input.organizationId,
@@ -23,7 +23,7 @@ export default class ChangeRoleUseCase implements ChangeRoleUseCaseInterface {
       member.role === MemberRole.ADMIN &&
       input.role !== MemberRole.ADMIN
     ) {
-      const adminCount = await this.memberRepository.countAdmins(
+      const adminCount = await this.memberGateway.countAdmins(
         input.organizationId,
       );
       if (adminCount <= 1) {
@@ -32,6 +32,7 @@ export default class ChangeRoleUseCase implements ChangeRoleUseCaseInterface {
     }
 
     member.changeRole(input.role);
-    await this.memberRepository.update(member);
+
+    await this.memberGateway.update(member);
   }
 }

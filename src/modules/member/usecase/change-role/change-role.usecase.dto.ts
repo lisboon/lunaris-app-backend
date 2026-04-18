@@ -1,8 +1,8 @@
 import BaseUseCase from '@/modules/@shared/usecase/base.usecase';
-import { MemberRole } from '@/modules/@shared/domain/enums';
 import { IsEnum, IsUUID } from 'class-validator';
+import { MemberRole } from '@/modules/@shared/domain/enums';
 
-export class ChangeRoleInputDto {
+export class ChangeRoleUseCaseInputDto {
   @IsUUID('4', { message: 'Invalid id' })
   id: string;
 
@@ -14,6 +14,6 @@ export class ChangeRoleInputDto {
 }
 
 export interface ChangeRoleUseCaseInterface
-  extends BaseUseCase<ChangeRoleInputDto, void> {
-  execute(input: ChangeRoleInputDto): Promise<void>;
+  extends BaseUseCase<ChangeRoleUseCaseInputDto, void> {
+  execute(input: ChangeRoleUseCaseInputDto): Promise<void>;
 }

@@ -31,20 +31,17 @@ export default class MemberRepository implements MemberGateway {
     return row ? this.toEntity(row) : null;
   }
 
-  async findByUserId(userId: string): Promise<Member | null> {
-  const row = await this.prisma.member.findFirst({
-    where: { userId, active: true, deletedAt: null },
-    orderBy: { createdAt: 'asc' },
-  });
-  return row ? this.toEntity(row) : null;
-}
-
-  async findByUserAndOrg(
-    userId: string,
-    organizationId: string,
-  ): Promise<Member | null> {
+  async findByUserAndOrg(userId: string, organizationId: string): Promise<Member | null> {
     const row = await this.prisma.member.findFirst({
       where: { userId, organizationId, deletedAt: null },
+    });
+    return row ? this.toEntity(row) : null;
+  }
+
+  async findByUserId(userId: string): Promise<Member | null> {
+    const row = await this.prisma.member.findFirst({
+      where: { userId, active: true, deletedAt: null },
+      orderBy: { createdAt: 'asc' },
     });
     return row ? this.toEntity(row) : null;
   }

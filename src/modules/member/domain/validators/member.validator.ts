@@ -6,13 +6,13 @@ import { Member } from '../member.entity';
 
 export class MemberRules {
   @IsUUID('4', {
-    message: 'Invalid user',
+    message: 'Invalid userId',
     groups: ['create', 'userId'],
   })
   userId: string;
 
   @IsUUID('4', {
-    message: 'Invalid organization',
+    message: 'Invalid organizationId',
     groups: ['create', 'organizationId'],
   })
   organizationId: string;

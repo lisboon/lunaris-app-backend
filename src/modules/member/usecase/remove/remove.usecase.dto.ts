@@ -1,7 +1,7 @@
 import BaseUseCase from '@/modules/@shared/usecase/base.usecase';
 import { IsUUID } from 'class-validator';
 
-export class RemoveMemberInputDto {
+export class RemoveMemberUseCaseInputDto {
   @IsUUID('4', { message: 'Invalid id' })
   id: string;
 
@@ -10,6 +10,6 @@ export class RemoveMemberInputDto {
 }
 
 export interface RemoveMemberUseCaseInterface
-  extends BaseUseCase<RemoveMemberInputDto, void> {
-  execute(input: RemoveMemberInputDto): Promise<void>;
+  extends BaseUseCase<RemoveMemberUseCaseInputDto, void> {
+  execute(input: RemoveMemberUseCaseInputDto): Promise<void>;
 }

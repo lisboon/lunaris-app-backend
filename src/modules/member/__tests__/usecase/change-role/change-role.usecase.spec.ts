@@ -1,44 +1,95 @@
 import ChangeRoleUseCase from '../../../usecase/change-role/change-role.usecase';
+import { ForbiddenError } from '@/modules/@shared/domain/errors/forbidden.error';
 import { Member } from '../../../domain/member.entity';
 import { MemberRole } from '@/modules/@shared/domain/enums';
-import { ForbiddenError } from '@/modules/@shared/domain/errors/forbidden.error';
 
-const orgId = '11111111-1111-4111-8111-111111111111';
-const userId = '22222222-2222-4222-8222-222222222222';
+const ORG_ID = '11111111-1111-4111-8111-111111111111';
 
-const makeSut = (adminCount = 2) => {
-  const member = Member.create({ userId, organizationId: orgId, role: MemberRole.ADMIN });
-  const findByIdUseCase = { execute: jest.fn().mockResolvedValue(member) };
-  const repository = {
+const adminMember = () =>
+  Member.create({
+    userId: '22222222-2222-4222-8222-222222222222',
+    organizationId: ORG_ID,
+    role: MemberRole.ADMIN,
+  });
+
+const designerMember = () =>
+  Member.create({
+    userId: '33333333-3333-4333-8333-333333333333',
+    organizationId: ORG_ID,
+    role: MemberRole.DESIGNER,
+  });
+
+const makeSut = (member: Member, adminCount: number = 2) => {
+  const memberGateway = {
     countAdmins: jest.fn().mockResolvedValue(adminCount),
     update: jest.fn().mockResolvedValue(undefined),
   };
-  const useCase = new ChangeRoleUseCase(repository as any, findByIdUseCase as any);
-  return { useCase, repository, member };
+  const findByIdUseCase = {
+    execute: jest.fn().mockResolvedValue(member),
+  };
+  const useCase = new ChangeRoleUseCase(
+    memberGateway as any,
+    findByIdUseCase as any,
+  );
+  return { useCase, memberGateway, findByIdUseCase };
 };
 
 describe('ChangeRoleUseCase', () => {
-  it('changes role when multiple admins exist', async () => {
-    const { useCase, repository, member } = makeSut(2);
-    await useCase.execute({ id: member.id, organizationId: orgId, role: MemberRole.DESIGNER });
-    expect(repository.update).toHaveBeenCalledTimes(1);
+  it('changes role from ADMIN to DESIGNER when there are multiple admins', async () => {
+    const member = adminMember();
+    const { useCase, memberGateway } = makeSut(member, 2);
+
+    await useCase.execute({
+      id: member.id,
+      organizationId: ORG_ID,
+      role: MemberRole.DESIGNER,
+    });
+
+    expect(memberGateway.countAdmins).toHaveBeenCalledWith(ORG_ID);
+    expect(memberGateway.update).toHaveBeenCalledTimes(1);
+    expect(member.role).toBe(MemberRole.DESIGNER);
   });
 
-  it('throws ForbiddenError when demoting last admin', async () => {
-    const { useCase, member } = makeSut(1);
+  it('throws ForbiddenError when demoting the last admin', async () => {
+    const member = adminMember();
+    const { useCase, memberGateway } = makeSut(member, 1);
+
     await expect(
-      useCase.execute({ id: member.id, organizationId: orgId, role: MemberRole.VIEWER }),
+      useCase.execute({
+        id: member.id,
+        organizationId: ORG_ID,
+        role: MemberRole.DESIGNER,
+      }),
     ).rejects.toBeInstanceOf(ForbiddenError);
+
+    expect(memberGateway.update).not.toHaveBeenCalled();
   });
 
-  it('allows role change for non-admin members regardless of count', async () => {
-    const member = Member.create({ userId, organizationId: orgId, role: MemberRole.DESIGNER });
-    const findByIdUseCase = { execute: jest.fn().mockResolvedValue(member) };
-    const repository = { countAdmins: jest.fn(), update: jest.fn().mockResolvedValue(undefined) };
-    const useCase = new ChangeRoleUseCase(repository as any, findByIdUseCase as any);
+  it('does not check admin count when promoting to ADMIN', async () => {
+    const member = designerMember();
+    const { useCase, memberGateway } = makeSut(member, 1);
 
-    await useCase.execute({ id: member.id, organizationId: orgId, role: MemberRole.VIEWER });
-    expect(repository.countAdmins).not.toHaveBeenCalled();
-    expect(repository.update).toHaveBeenCalledTimes(1);
+    await useCase.execute({
+      id: member.id,
+      organizationId: ORG_ID,
+      role: MemberRole.ADMIN,
+    });
+
+    expect(memberGateway.countAdmins).not.toHaveBeenCalled();
+    expect(memberGateway.update).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not check admin count when changing between non-admin roles', async () => {
+    const member = designerMember();
+    const { useCase, memberGateway } = makeSut(member, 1);
+
+    await useCase.execute({
+      id: member.id,
+      organizationId: ORG_ID,
+      role: MemberRole.VIEWER,
+    });
+
+    expect(memberGateway.countAdmins).not.toHaveBeenCalled();
+    expect(memberGateway.update).toHaveBeenCalledTimes(1);
   });
 });
