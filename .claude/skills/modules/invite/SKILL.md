@@ -2,7 +2,7 @@
 name: invite
 description: Invite module — email invitations with token-based acceptance, role-based invites, 7-day expiry, no duplicate pending.
 user-invocable: true
-argument-hint: ""
+argument-hint: “”
 ---
 
 # Invite Module

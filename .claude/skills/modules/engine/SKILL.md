@@ -2,7 +2,7 @@
 name: engine
 description: Engine module — API Key management for the UE5 plugin. Per-organization key issuance, SHA-256 hash storage, revoke workflow, global validation gateway for the AuthGuard.
 user-invocable: true
-argument-hint: ""
+argument-hint: “”
 ---
 
 # Engine Module

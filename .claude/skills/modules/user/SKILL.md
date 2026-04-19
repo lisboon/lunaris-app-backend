@@ -2,7 +2,7 @@
 name: user
 description: User module — registration, login, identity management. Handles auth flows, JWT issuance, password hashing. Global user identity.
 user-invocable: true
-argument-hint: ""
+argument-hint: “”
 ---
 
 # User Module

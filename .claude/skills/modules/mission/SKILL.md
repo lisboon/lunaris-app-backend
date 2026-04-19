@@ -2,7 +2,7 @@
 name: mission
 description: Mission module — entity/usecases/repository/facade for UE5 mission orchestration with DAG validation, SHA-256 versioning and publish workflow. Workspace-scoped.
 user-invocable: true
-argument-hint: ""
+argument-hint: “”
 ---
 
 # Mission Module

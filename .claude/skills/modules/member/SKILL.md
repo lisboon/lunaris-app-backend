@@ -2,7 +2,7 @@
 name: member
 description: Member module — User × Organization linking, role-based access control (RBAC), last-admin protection with Serializable isolation.
 user-invocable: true
-argument-hint: ""
+argument-hint: “”
 ---
 
 # Member Module

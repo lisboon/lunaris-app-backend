@@ -2,7 +2,7 @@
 name: organization
 description: Organization module — tenant (studio) management, slug-based uniqueness, profile updates, cascade soft-delete into members and invites.
 user-invocable: true
-argument-hint: ""
+argument-hint: “”
 ---
 
 # Organization Module
