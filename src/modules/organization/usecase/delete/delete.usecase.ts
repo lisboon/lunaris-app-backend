@@ -1,4 +1,7 @@
 import { OrganizationGateway } from '../../gateway/organization.gateway';
+import { MemberGateway } from '@/modules/member/gateway/member.gateway';
+import { InviteGateway } from '@/modules/invite/gateway/invite.gateway';
+import { TransactionManager } from '@/modules/@shared/domain/transaction/transaction-manager.interface';
 import { FindByIdUseCaseInterface } from '../find-by-id/find-by-id.usecase.dto';
 import {
   DeleteUseCaseInputDto,
@@ -9,6 +12,9 @@ export default class DeleteUseCase implements DeleteUseCaseInterface {
   constructor(
     private readonly organizationGateway: OrganizationGateway,
     private readonly findByIdUseCase: FindByIdUseCaseInterface,
+    private readonly memberGateway: MemberGateway,
+    private readonly inviteGateway: InviteGateway,
+    private readonly transactionManager: TransactionManager,
   ) {}
 
   async execute(input: DeleteUseCaseInputDto): Promise<void> {
@@ -16,6 +22,10 @@ export default class DeleteUseCase implements DeleteUseCaseInterface {
 
     organization.delete();
 
-    await this.organizationGateway.update(organization);
+    await this.transactionManager.execute(async (trx) => {
+      await this.organizationGateway.update(organization, trx);
+      await this.memberGateway.softDeleteByOrganization(input.id, trx);
+      await this.inviteGateway.cancelPendingByOrganization(input.id, trx);
+    });
   }
 }

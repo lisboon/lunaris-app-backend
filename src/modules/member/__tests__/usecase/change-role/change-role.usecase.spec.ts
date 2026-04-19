@@ -116,4 +116,20 @@ describe('ChangeRoleUseCase', () => {
       expect.objectContaining({ trx: true }),
     );
   });
+
+  it('uses Serializable isolation level to guard the last-admin invariant', async () => {
+    const member = adminMember();
+    const { useCase, transactionManager } = makeSut(member, 2);
+
+    await useCase.execute({
+      id: member.id,
+      organizationId: ORG_ID,
+      role: MemberRole.DESIGNER,
+    });
+
+    expect(transactionManager.execute).toHaveBeenCalledWith(
+      expect.any(Function),
+      { isolationLevel: 'Serializable' },
+    );
+  });
 });

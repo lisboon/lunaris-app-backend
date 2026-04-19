@@ -33,7 +33,7 @@ export interface CreateInviteFacadeOutputDto {
 export interface AcceptInviteFacadeInputDto {
   token: string;
   name?: string;
-  password?: string;
+  password: string;
 }
 export interface AcceptInviteFacadeOutputDto {
   userId: string;

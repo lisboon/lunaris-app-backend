@@ -8,4 +8,8 @@ export interface InviteGateway {
   findByOrganization(organizationId: string): Promise<Invite[]>;
   create(invite: Invite, trx?: TransactionContext): Promise<void>;
   update(invite: Invite, trx?: TransactionContext): Promise<void>;
+  cancelPendingByOrganization(
+    organizationId: string,
+    trx?: TransactionContext,
+  ): Promise<void>;
 }

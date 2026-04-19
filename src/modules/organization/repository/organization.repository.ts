@@ -52,8 +52,9 @@ export default class OrganizationRepository implements OrganizationGateway {
     });
   }
 
-  async update(org: Organization): Promise<void> {
-    await this.prisma.organization.update({
+  async update(org: Organization, trx?: TransactionContext): Promise<void> {
+    const client = this.getClient(trx);
+    await client.organization.update({
       where: { id: org.id },
       data: {
         name: org.name,

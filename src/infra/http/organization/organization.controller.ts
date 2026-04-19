@@ -14,7 +14,7 @@ import { RolesGuard } from '../auth/roles-guard';
 import { Roles } from '../shared/roles.decorator';
 import { MemberRole } from '@/modules/@shared/domain/enums';
 import { OrganizationService } from './organization.service';
-import { UpdateUseCaseInputDto } from '@/modules/organization/usecase/update/update.usecase.dto';
+import { UpdateOrganizationBodyDto } from './dto/update-organization.body.dto';
 
 @ApiTags('Organizations')
 @ApiBearerAuth()
@@ -37,7 +37,7 @@ export class OrganizationController {
   @Roles({ role: MemberRole.ADMIN })
   async update(
     @Request() req: { user: JwtPayload },
-    @Body() body: UpdateUseCaseInputDto,
+    @Body() body: UpdateOrganizationBodyDto,
   ) {
     await this.organizationService.update({
       id: req.user.organizationId,

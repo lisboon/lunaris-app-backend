@@ -9,4 +9,8 @@ export interface MemberGateway {
   create(member: Member, trx?: TransactionContext): Promise<void>;
   update(member: Member, trx?: TransactionContext): Promise<void>;
   countAdmins(organizationId: string, trx?: TransactionContext): Promise<number>;
+  softDeleteByOrganization(
+    organizationId: string,
+    trx?: TransactionContext,
+  ): Promise<void>;
 }

@@ -7,9 +7,9 @@ argument-hint: ""
 
 # Invite Module
 
-**Purpose:** manage email invitations for new users to join an organization. An *Invite* is a tokenized invitation (email, role, status, 7-day expiry). Invites are created by admins, accepted publicly por token, ou cancelled por admins. Diferente dos outros módulos, invites usam ciclo de status (PENDING → ACCEPTED | CANCELLED) em vez de soft delete.
+**Purpose:** manage email invitations for new users to join an organization. An *Invite* is a tokenized invitation (email, role, status, 7-day expiry). Invites are created by admins, accepted publicly via token, or cancelled by admins. Unlike other modules, invites use a status cycle (PENDING → ACCEPTED | CANCELLED) instead of soft delete.
 
-**Scope:** per-organization — invites carregam `organizationId`.
+**Scope:** per-organization — every invite carries `organizationId`.
 
 ---
 
@@ -18,24 +18,25 @@ argument-hint: ""
 ```
 src/modules/invite/
 ├── domain/
-│   ├── invite.entity.ts                 ← rich entity (accept, cancel, renewToken, isExpired)
+│   ├── invite.entity.ts                 ← rich entity (accept, cancel, renewToken, isExpired), normalizes email in the constructor
 │   └── validators/invite.validator.ts   ← class-validator (email, role, token, uuids)
 ├── event/
-│   ├── invite-created.event.ts          ← emitido em Invite.create()
-│   └── invite-accepted.event.ts         ← emitido em invite.accept(userId)
-├── gateway/invite.gateway.ts            ← interface; create/update aceitam trx opcional
-├── repository/invite.repository.ts      ← Prisma impl, usa getClient(trx) em create/update
+│   ├── invite-created.event.ts          ← emitted on Invite.create()
+│   ├── invite-accepted.event.ts         ← emitted on invite.accept(userId)
+│   └── invite-resent.event.ts           ← emitted on invite.renewToken(...)
+├── gateway/invite.gateway.ts            ← interface; create/update accept optional trx; cancelPendingByOrganization supports cascade
+├── repository/invite.repository.ts      ← Prisma impl, getClient(trx) in writes, normalizes email on findByEmailAndOrg
 ├── usecase/
-│   ├── create-invite/                   ← valida sem PENDING duplicado + expiry 7d + dispatch InviteCreatedEvent
-│   ├── accept-invite/                   ← User+Member+Invite em UMA transação, dispatch InviteAcceptedEvent
+│   ├── create-invite/                   ← blocks duplicate PENDING + 7d expiry + dispatches InviteCreatedEvent
+│   ├── accept-invite/                   ← User+Member+Invite in ONE transaction, requires password, dispatches InviteAcceptedEvent
 │   ├── cancel-invite/                   ← PENDING → CANCELLED
 │   ├── list-invites/                    ← findByOrganization → toJSON[]
-│   └── resend-invite/                   ← gera novo token + estende expiry
+│   └── resend-invite/                   ← new token + extends expiry + dispatches InviteResentEvent
 ├── facade/
 │   ├── invite.facade.ts                 ← default export InviteFacade
 │   └── invite.facade.dto.ts
-├── factory/facade.factory.ts            ← compõe repos, services, transactionManager, eventDispatcher
-└── __tests__/                           ← espelha a estrutura
+├── factory/facade.factory.ts            ← wires repos, services, transactionManager, eventDispatcher
+└── __tests__/                           ← mirrors the layout
 ```
 
 ---
@@ -44,44 +45,49 @@ src/modules/invite/
 
 ```ts
 class Invite extends BaseEntity {
-  _email: string;
+  _email: string;               // normalized (trim + lowercase) in the constructor
   _role: MemberRole;            // ADMIN | DESIGNER | VIEWER
   _status: InviteStatus;        // PENDING | ACCEPTED | CANCELLED
-  _token: string;               // secret; NUNCA sai via toJSON
+  _token: string;               // secret; NEVER leaks via toJSON
   _organizationId: string;
   _invitedById: string;
   _expiresAt: Date;
-  // NÃO usa _deletedAt — status é o ciclo de vida
+  // does NOT use _deletedAt — status IS the lifecycle
 }
 ```
 
-`toJSON()` retorna `{ id, email, role, status, organizationId, invitedById, expiresAt, createdAt, updatedAt }`. **Não** inclui `token`, `active` nem `deletedAt`. Para acesso ao token (fluxo de envio por email), use `invite.token` via getter.
+`toJSON()` returns `{ id, email, role, status, organizationId, invitedById, expiresAt, createdAt, updatedAt }`. It **does not** include `token`, `active`, or `deletedAt`. To send the email invite link, read `invite.token` via the getter directly in the use case.
 
 ---
 
-## Regras-chave
+## Key rules
 
-### 1. Ciclo de status (sem soft delete)
-Transições válidas a partir de `PENDING`: `ACCEPTED` (via token) ou `CANCELLED` (via admin). Após sair de `PENDING`, não há retorno.
+### 1. Status cycle (no soft delete)
+Valid transitions from `PENDING`: `ACCEPTED` (via token) or `CANCELLED` (via admin). Once it leaves `PENDING`, it's terminal.
 
-### 2. Sem invite PENDING duplicado por `(email, organizationId)`
-`CreateInviteUseCase` consulta `findByEmailAndOrg` (filtra `status: PENDING`) antes de criar. Se existir um PENDING (mesmo expirado), rejeita com `EntityValidationError`. Um invite CANCELLED ou ACCEPTED não bloqueia novos convites para o mesmo email.
+### 2. No duplicate PENDING invite for `(email, organizationId)`
+`CreateInviteUseCase` checks `findByEmailAndOrg` (filtered to `status: PENDING`) before creating. An existing PENDING (even expired) rejects with `EntityValidationError`. CANCELLED or ACCEPTED invites do not block.
 
-### 3. Expiry de 7 dias
-`CreateInviteUseCase` e `ResendInviteUseCase` setam `expiresAt = now + 7d`. Entity expõe `isExpired()`. `invite.accept(userId)` lança `ForbiddenError` se expirado.
+### 3. Email is normalized everywhere
+`Invite.create` runs the email through `normalizeEmail()`. `InviteRepository.findByEmailAndOrg` also normalizes the input so lookup is case/whitespace insensitive.
 
-### 4. Token criptograficamente seguro
-`InviteTokenService.generate()` retorna 64+ chars hex (`crypto.randomBytes(32).toString('hex')`). Armazenado em claro (já é secret). Enviado ao convidado via link `/invites/accept?token=...`.
+### 4. 7-day expiry
+`CreateInviteUseCase` and `ResendInviteUseCase` set `expiresAt = now + 7d`. The entity exposes `isExpired()`. `invite.accept(userId)` throws `ForbiddenError` if expired.
 
-### 5. `AcceptInviteUseCase` é atômico
-User + Member + Invite.update rodam dentro de `transactionManager.execute`. Se o invitee é usuário novo, cria `User`; senão reusa o existente. Sempre cria `Member`. `invite.accept(userId)` muda status para `ACCEPTED`. Dispara `InviteAcceptedEvent` **depois** da transação commitar.
+### 5. Cryptographically secure token
+`InviteTokenService.generate()` returns 64+ hex chars (`crypto.randomBytes(32).toString('hex')`). Stored in clear (it's already a secret). Delivered via `/invites/accept?token=...`.
 
-### 6. Eventos só são despachados após persistir
+### 6. `AcceptInviteUseCase` is atomic and requires password
+- `password` is **required** in the input.
+- Before the transaction: if a `User` already exists for `invite.email`, the use case calls `passwordHashService.compare(input.password, user.password)` and throws `BadLoginError` on mismatch — this prevents account hijacking via the public accept flow.
+- Inside the transaction: creates a new `User` if missing (hashing the password), creates `Member`, mutates `invite.accept(userId)` and `inviteGateway.update(invite, trx)`.
+- After commit: pulls and dispatches `InviteAcceptedEvent`.
+
+### 7. Events only fire after persistence
 ```ts
-// dentro do use case
-await transactionManager.execute(async (trx) => {
-  ...
-  invite.accept(userId);
+await this.transactionManager.execute(async (trx) => {
+  // ... writes ...
+  invite.accept(user.id);
   await this.inviteGateway.update(invite, trx);
 });
 
@@ -92,30 +98,36 @@ if (this.eventDispatcher) {
 }
 ```
 
-### 7. Token não vaza por toJSON
-`ListInvitesUseCase` retorna `invite.toJSON()` — seguro. Onde o token é necessário (create, resend), o use case lê `invite.token` diretamente e devolve no output DTO.
+Same pattern in `ResendInviteUseCase`: `invite.renewToken(newToken, newExpiresAt)` → `await inviteGateway.update(invite)` → dispatch `InviteResentEvent`.
+
+### 8. Token never leaks via toJSON
+`ListInvitesUseCase` returns `invite.toJSON()` — safe. Where the token is needed (create, resend), the use case reads `invite.token` directly and returns it in the output DTO.
+
+### 9. Cascade on organization delete
+`InviteGateway.cancelPendingByOrganization(organizationId, trx?)` is called by `OrganizationDeleteUseCase` inside the delete transaction. PENDING invites become CANCELLED so stale links stop working when the org is tombstoned.
 
 ---
 
 ## Use cases
 
-| Use case | Input → Output | Notas |
+| Use case | Input → Output | Notes |
 |---|---|---|
-| `CreateInviteUseCase` | `{ email, role, organizationId, invitedById }` → `{ id, email, role, organizationId, token, expiresAt }` | rejeita PENDING duplicado; emite `InviteCreatedEvent` |
-| `AcceptInviteUseCase` | `{ token, name?, password? }` → `{ userId, memberId, organizationId }` | transacional; emite `InviteAcceptedEvent` |
+| `CreateInviteUseCase` | `{ email, role, organizationId, invitedById }` → `{ id, email, role, organizationId, token, expiresAt }` | rejects duplicate PENDING; dispatches `InviteCreatedEvent` |
+| `AcceptInviteUseCase` | `{ token, name?, password }` → `{ userId, memberId, organizationId }` | transactional; verifies password for existing users; dispatches `InviteAcceptedEvent` |
 | `CancelInviteUseCase` | `{ id, organizationId }` → `void` | PENDING → CANCELLED |
-| `ListInvitesUseCase` | `{ organizationId }` → `object[]` | lista toJSON ordenado por `createdAt desc` |
-| `ResendInviteUseCase` | `{ id, organizationId }` → `void` | novo token + renova expiry |
+| `ListInvitesUseCase` | `{ organizationId }` → `object[]` | lists `toJSON` ordered by `createdAt desc` |
+| `ResendInviteUseCase` | `{ id, organizationId }` → `void` | new token + extends expiry; dispatches `InviteResentEvent` |
 
 ---
 
-## Erros possíveis
+## Errors thrown
 
-| Error | Quando |
+| Error | When |
 |---|---|
-| `NotFoundError(id, Invite)` | `cancel`/`resend` não achou invite no org; `accept` não achou por token |
-| `ForbiddenError` | tentar accept/cancel/renew em invite não-PENDING; accept em invite expirado |
-| `EntityValidationError` | DTO inválido; invite PENDING já existente para `(email, org)` |
+| `NotFoundError(id, Invite)` | `cancel`/`resend` cannot find the invite in the org; `accept` cannot find it by token |
+| `ForbiddenError` | accept/cancel/renew on a non-PENDING invite; accept on expired invite |
+| `BadLoginError` | `accept` with a password that doesn't match an existing user |
+| `EntityValidationError` | invalid DTO; existing PENDING invite for `(email, org)` |
 
 ---
 
@@ -124,11 +136,12 @@ if (this.eventDispatcher) {
 ```ts
 interface InviteGateway {
   findById(id: string, organizationId: string): Promise<Invite | null>;
-  findByToken(token: string): Promise<Invite | null>;                  // usado pelo accept público
+  findByToken(token: string): Promise<Invite | null>;                  // used by public accept
   findByEmailAndOrg(email: string, organizationId: string): Promise<Invite | null>;
   findByOrganization(organizationId: string): Promise<Invite[]>;
   create(invite: Invite, trx?: TransactionContext): Promise<void>;
   update(invite: Invite, trx?: TransactionContext): Promise<void>;
+  cancelPendingByOrganization(organizationId: string, trx?: TransactionContext): Promise<void>;
 }
 ```
 
@@ -137,45 +150,48 @@ interface InviteGateway {
 ## HTTP Routes
 
 ```
-POST /invites           @Roles({ role: MemberRole.ADMIN })
-  Body: { email, role } → InviteDto (inclui token)
+POST   /invites             @Roles({ role: MemberRole.ADMIN })
+  Body: CreateInviteBodyDto { email, role } → invite output (includes token)
 
-GET  /invites           @Roles({ role: MemberRole.ADMIN })
-  → InviteDto[] (sem token)
+GET    /invites             @Roles({ role: MemberRole.ADMIN })
+  → InviteDto[] (no token)
 
-POST /invites/accept    (pública)
-  Body: { token, name?, password? } → { userId, memberId, organizationId }
+POST   /invites/accept      (public)
+  Body: { token, name?, password } → { userId, memberId, organizationId }
 
-DELETE /invites/:id     @Roles({ role: MemberRole.ADMIN })
+DELETE /invites/:id         @Roles({ role: MemberRole.ADMIN })
 
-POST /invites/:id/resend @Roles({ role: MemberRole.ADMIN })
+POST   /invites/:id/resend  @Roles({ role: MemberRole.ADMIN })
 ```
+
+All mutating bodies are concrete DTO classes under `src/infra/http/invite/dto/` with `class-validator` decorators — never `Pick<>`/`Omit<>`.
 
 ---
 
 ## Infra
 
-- `src/infra/http/invite/invite.module.ts` — provê `InviteFacade` via factory.
-- `src/infra/http/invite/invite.controller.ts` — REST em `/invites`. `POST /accept` é público; demais rotas exigem `AuthGuard + RolesGuard`.
-- `src/infra/http/invite/invite.service.ts` — adapter fino para `InviteFacade`.
-- `InviteFacadeFactory.create(eventDispatcher?)` — dispatcher é opcional (sem dispatcher global wired ainda).
+- `src/infra/http/invite/invite.module.ts` — provides `InviteFacade` via factory.
+- `src/infra/http/invite/invite.controller.ts` — REST at `/invites`. `POST /accept` is public; all other routes require `AuthGuard + RolesGuard`.
+- `src/infra/http/invite/invite.service.ts` — thin adapter over `InviteFacade`.
+- `InviteFacadeFactory.create(eventDispatcher?)` — dispatcher is optional. When supplied it's threaded into both `CreateInviteUseCase` and `ResendInviteUseCase` so domain events reach subscribers.
 
 ---
 
 ## Testing
 
-- Entidade testada pura: validação de props, transições de status, emissão de eventos, formato do `toJSON` (não vaza token/active/deletedAt).
-- Use cases mockam gateways via `jest.fn()` e mock de `transactionManager` com `execute: jest.fn((fn) => fn({ trx: true }))`.
-- `AcceptInviteUseCase` valida: fluxo new-user vs existing-user, `inviteGateway.update` recebe o `trx`, `InviteAcceptedEvent` é despachado, expiry/token inválido erram corretamente.
-- Facade mocka cada use case.
+- Entity tested pure: prop validation, email normalization, status transitions, event emission (create/accept/renewToken), `toJSON` shape (no token/active/deletedAt).
+- Use cases mock gateways with `jest.fn()` and `transactionManager.execute: jest.fn(async (fn) => fn({ trx: true }))`.
+- `AcceptInviteUseCase` spec covers: new-user vs existing-user flows, password mismatch → `BadLoginError`, `inviteGateway.update(invite, trx)` gets the trx, `InviteAcceptedEvent` dispatched after commit, expiry/invalid token errors.
+- `ResendInviteUseCase` spec asserts dispatch order via `mock.invocationCallOrder` (`dispatch` > `update`) and that `InviteResentEvent` is emitted.
+- Facade mocks each use case.
 
 ---
 
 ## Update this skill when you change the module
 
-Conforme MANDATORY rule do CLAUDE.md, atualize este arquivo ao:
-- adicionar/renomear use case ou rota
-- mudar DTO, signature de gateway ou shape de `toJSON`
-- alterar regra de expiry, ciclo de status ou duplicidade
-- adicionar/remover evento de domínio
-- mexer na geração ou validação de token
+Per the MANDATORY rule in CLAUDE.md, update this file when you:
+- add/rename a use case or route
+- change a DTO, gateway signature, or `toJSON` shape
+- alter expiry, status cycle, or duplicate rules
+- add/remove a domain event
+- touch token generation or validation

@@ -40,6 +40,7 @@ export default class InviteFacadeFactory {
     const resendUseCase = new ResendInviteUseCase(
       inviteRepository,
       inviteTokenService,
+      eventDispatcher,
     );
 
     return new InviteFacade(

@@ -4,16 +4,16 @@ NestJS backend for a logic engine and mission orchestration (UE5). DDD + Clean A
 
 ## MANDATORY RULE: Keep Your Skills Up to Date
 
-**After ANY interaction with the project** — Whether it’s reading code, editing files, creating use cases, fixing bugs, refactoring, answering questions, or any other task—**you MUST update the corresponding skill** in `.claude/skills/` with what you’ve learned.
+**After ANY interaction with the project** — whether it's reading code, editing files, creating use cases, fixing bugs, refactoring, answering questions, or any other task — **you MUST update the corresponding skill** in `.claude/skills/` with what you've learned.
 
 This includes, but is not limited to:
 - **New use cases, entities, or routes** created → add to the module's skill
-- **Changes to DTOs or validations** → Update in the skill
-- **New API endpoints** document it in the E module's skill in `/docs/api/insomnia.json`
-- **New patterns or guards** → Update `project/SKILL.md`
+- **Changes to DTOs or validations** → update in the skill
+- **New API endpoints** → document in the module's skill and in `/docs/api/insomnia.json`
+- **New patterns or guards** → update `project/SKILL.md`
 - **Changes to business rules** → update `lunaris-business-rules`
-- **New external integrations** → Update `integrations/SKILL.md`
-- **Changes to the stack or dependencies** → Update `project/SKILL.md` and `lunaris-ecosystem`
+- **New external integrations** → update `integrations/SKILL.md`
+- **Changes to the stack or dependencies** → update `project/SKILL.md` and `lunaris-ecosystem`
 
 **Skills are the lifeblood of the project. If they are out of date, all future interactions will be compromised.**
 
@@ -33,7 +33,7 @@ Lunaris follows a Slack/Linear-style multi-tenancy model for AAA game studios.
 |---|---|---|
 | `Organization` | The tenant (studio: CD Projekt, Ubisoft). Top-level isolation boundary. | Global |
 | `Workspace` | Project/team inside an Organization (e.g. "Cyberpunk Team"). Owns missions and game logic. | Per-Organization |
-| `User` | Real person. | Global (same user can belong to many orgs) |
+| `User` | Real person. | Global (same user may belong to many orgs) |
 | `Membership` | Link `User × Organization` (and later Workspace). Carries role/permissions (RBAC). | Per-Organization |
 
 **Tenancy rules:**
@@ -43,36 +43,50 @@ Lunaris follows a Slack/Linear-style multi-tenancy model for AAA game studios.
 
 ## Stack
 
-- **In Development**
+- **Runtime**: Node.js 24, TypeScript 5.7
+- **Framework**: NestJS 11 (`@nestjs/common`, `@nestjs/core`, `@nestjs/platform-express`)
+- **Build/Transform**: SWC (`@swc/core`)
+- **ORM**: Prisma 7 (`@prisma/client`, generated at `generated/prisma/client`)
+- **Database**: PostgreSQL
+- **Auth**: `@nestjs/jwt` + `jsonwebtoken`, `bcrypt` for password hashing
+- **Validation**: `class-validator` + `class-transformer`
+- **API docs**: `@nestjs/swagger`
+- **Security**: `helmet`, `@nestjs/throttler`
+- **Testing**: Jest 30 + `ts-jest`, `supertest` (e2e)
+- **Tooling**: ESLint 9, Prettier 3, commitlint + husky (conventional commits)
+- **IDs**: `uuid` (v4)
 
 ## Conventions
 
-- Files (por módulo):
+- Files (per module):
   - Domain: `[name].entity.ts`, `validators/[name].validator.ts`
   - Use case: `usecase/[action]/[action].usecase.ts` + `[action].usecase.dto.ts`
   - Gateway: `gateway/[name].gateway.ts`
   - Repository: `repository/[name].repository.ts`
   - Facade: `facade/[name].facade.ts` + `facade/[name].facade.dto.ts`
-  - Factory: `factory/facade.factory.ts` (um por módulo, nome fixo)
-  - Eventos: `event/[event-name].event.ts`
-- Class names: PascalCase com sufixo semântico (`User`, `LoginUseCase`, `UserFacade`, `UserRepository`, `UserFacadeFactory`). Entidades não carregam sufixo `Entity` — o nome do arquivo já é `user.entity.ts`.
-- DTOs: classes anotadas com `class-validator` que servem como tipo E validador — `{Action}UseCaseInputDto` / `{Action}UseCaseOutputDto` no use case, e `{Action}FacadeInputDto` / `{Action}FacadeOutputDto` na facade. Interfaces puras para facades são exportadas junto com as classes quando fazem sentido.
-- Exceções de tenancy em `findById`:
-  - `UserGateway.findById(id)` — `User` é global
-  - `OrganizationGateway.findById(id)` — a própria org é o tenant
+  - Factory: `factory/facade.factory.ts` (one per module, fixed name)
+  - Events: `event/[event-name].event.ts`
+- Class names: PascalCase with semantic suffix (`User`, `LoginUseCase`, `UserFacade`, `UserRepository`, `UserFacadeFactory`). Entities drop the `Entity` suffix — the file name already says `user.entity.ts`.
+- DTOs: classes annotated with `class-validator` that act as type AND validator — `{Action}UseCaseInputDto` / `{Action}UseCaseOutputDto` in use cases, `{Action}FacadeInputDto` / `{Action}FacadeOutputDto` in facades. Pure interfaces (e.g. `InviteFacadeInterface`) are exported alongside the classes when useful.
+- Controller `@Body()` must be a concrete class with `class-validator` decorators — **never** `Pick<>`, `Omit<>`, or structural type literals. The global `ValidationPipe` only enforces `whitelist`/`forbidNonWhitelisted` on classes.
+- `findById` tenancy exceptions:
+  - `UserGateway.findById(id)` — `User` is global
+  - `OrganizationGateway.findById(id)` — the org is itself the tenant
 - Enums: UPPER_SNAKE_CASE
 - Path alias: `@/*` → `./src/*`
+- Emails: always go through `normalizeEmail()` (`@/modules/@shared/domain/utils/email`) inside the entity constructor and any repository lookup by email.
 
 ## Patterns
 
-- **Soft delete**: entidades tenant-scoped usam `deletedAt`. `Invite` é exceção: usa ciclo de status (`PENDING → ACCEPTED | CANCELLED`).
-- **Transações**: gateways que participam de escrita coordenada aceitam `trx?: TransactionContext`. Use cases orquestram via `TransactionManager.execute(async (trx) => ...)`.
-- **Eventos de domínio**: entidade acumula via `this.addEvent(event)`; o **use case** faz `entity.pullEvents()` e dispacha **depois** da persistência (ou depois do `transactionManager.execute` retornar). Nunca disparar de dentro da entidade.
+- **Soft delete**: tenant-scoped entities use `deletedAt`. `Invite` is an exception: it uses a status cycle (`PENDING → ACCEPTED | CANCELLED`).
+- **Cascade**: deleting a tenant soft-deletes its children in the same transaction (e.g. `OrganizationDeleteUseCase` calls `memberGateway.softDeleteByOrganization` and `inviteGateway.cancelPendingByOrganization` inside `transactionManager.execute`).
+- **Transactions**: gateways that participate in coordinated writes accept `trx?: TransactionContext`. Use cases orchestrate via `transactionManager.execute(async (trx) => ...)`. Pass `{ isolationLevel: 'Serializable' }` as the second argument when the critical section depends on read-modify-write invariants (e.g. last-admin checks).
+- **Domain events**: the entity accumulates events via `this.addEvent(event)`; the **use case** calls `entity.pullEvents()` and dispatches **after** persistence commits (or after `transactionManager.execute` returns). Never dispatch from inside the entity.
 - **Commits**: conventional commits (commitlint + husky)
-- **Testing**: Jest + SWC, padrão `makeSut()` com `jest.fn()`; entidades testadas sem mocks, use cases mockam gateways, facade mocka use cases.
-- **Validation**: class-validator nos DTOs; Notification pattern nas entidades (coleta todos os erros antes de lançar `EntityValidationError`).
+- **Testing**: Jest + SWC, `makeSut()` pattern with `jest.fn()`; entities tested without mocks, use cases mock gateways, facades mock use cases.
+- **Validation**: `class-validator` on DTOs; Notification pattern in entities (collects all errors before throwing `EntityValidationError`).
 - **Errors**: `NotFoundError`, `BadLoginError`, `EntityValidationError`, `ForbiddenError`, `UnauthorizedError`, `TokenExpiredError`.
-- **Guards**: `@UseGuards(AuthGuard, RolesGuard)` no `@Controller`, `@Roles({ role: MemberRole.X })` por rota (nível mínimo). Ver `.claude/rules/controllers.md`.
+- **Guards**: `@UseGuards(AuthGuard, RolesGuard)` on the `@Controller`, `@Roles({ role: MemberRole.X })` per route (minimum level). See `.claude/rules/controllers.md`.
 - **Pagination**: `SearchParams<Filter>` / `SearchResult<T>` from `@shared` (camelCase: `perPage`, `sortDir`, `currentPage`, `lastPage`).
 
 
@@ -80,13 +94,13 @@ Lunaris follows a Slack/Linear-style multi-tenancy model for AAA game studios.
 
 ```bash
 npm run start        # SWC dev server
-npm run dev          # Watch mode
+npm run start:dev    # Watch mode
 npm run build        # Production build
 npm run test         # Unit tests
-npm run test:int     # Integration tests
+npm run test:e2e     # End-to-end tests
+npm run test:cov     # Coverage
 npm run lint         # ESLint
 npm run format       # Prettier
-npm run command      # CLI tools
 ```
 
 ## Skills (Slash Commands)

@@ -4,6 +4,7 @@ import { MemberGateway } from '@/modules/member/gateway/member.gateway';
 import { User } from '@/modules/user/domain/user.entity';
 import { Member } from '@/modules/member/domain/member.entity';
 import { NotFoundError } from '@/modules/@shared/domain/errors/not-found.error';
+import { BadLoginError } from '@/modules/@shared/domain/errors/bad-login.error';
 import { PasswordHashService } from '@/modules/@shared/domain/services/password-hash.service';
 import { TransactionManager } from '@/modules/@shared/domain/transaction/transaction-manager.interface';
 import { EventDispatcherInterface } from '@/modules/@shared/domain/events/event-dispatcher.interface';
@@ -37,12 +38,22 @@ export default class AcceptInviteUseCase
 
     let user = await this.userGateway.findByEmail(invite.email);
 
+    if (user) {
+      const isPasswordValid = await this.passwordHashService.compare(
+        data.password,
+        user.password,
+      );
+      if (!isPasswordValid) {
+        throw new BadLoginError();
+      }
+    }
+
     let member!: Member;
 
     await this.transactionManager.execute(async (trx) => {
       if (!user) {
         const hashedPassword = await this.passwordHashService.hash(
-          data.password ?? '',
+          data.password,
         );
         user = User.create({
           email: invite.email,

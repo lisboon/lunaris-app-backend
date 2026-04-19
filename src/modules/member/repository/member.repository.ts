@@ -40,7 +40,12 @@ export default class MemberRepository implements MemberGateway {
 
   async findByUserId(userId: string): Promise<Member | null> {
     const row = await this.prisma.member.findFirst({
-      where: { userId, active: true, deletedAt: null },
+      where: {
+        userId,
+        active: true,
+        deletedAt: null,
+        organization: { deletedAt: null },
+      },
       orderBy: { createdAt: 'asc' },
     });
     return row ? this.toEntity(row) : null;
@@ -93,6 +98,18 @@ export default class MemberRepository implements MemberGateway {
         active: true,
         deletedAt: null,
       },
+    });
+  }
+
+  async softDeleteByOrganization(
+    organizationId: string,
+    trx?: TransactionContext,
+  ): Promise<void> {
+    const client = this.getClient(trx);
+    const now = new Date();
+    await client.member.updateMany({
+      where: { organizationId, deletedAt: null },
+      data: { active: false, deletedAt: now, updatedAt: now },
     });
   }
 }

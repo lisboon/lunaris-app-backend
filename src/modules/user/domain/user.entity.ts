@@ -1,5 +1,6 @@
 import BaseEntity from '@/modules/@shared/domain/entity/base.entity';
 import { EntityValidationError } from '@/modules/@shared/domain/errors/validation.error';
+import { normalizeEmail } from '@/modules/@shared/domain/utils/email';
 import UserValidatorFactory from './validators/user.validator';
 
 export interface UserProps {
@@ -28,7 +29,7 @@ export class User extends BaseEntity {
       props.active,
       props.deletedAt,
     );
-    this._email = props.email;
+    this._email = normalizeEmail(props.email);
     this._name = props.name;
     this._password = props.password;
     this._avatarUrl = props.avatarUrl;
@@ -55,7 +56,7 @@ export class User extends BaseEntity {
   }
 
   changeEmail(email: string) {
-    this._email = email;
+    this._email = normalizeEmail(email);
   }
 
   changePassword(hashedPassword: string) {

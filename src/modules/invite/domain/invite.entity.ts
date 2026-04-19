@@ -2,9 +2,11 @@ import BaseEntity from '@/modules/@shared/domain/entity/base.entity';
 import { EntityValidationError } from '@/modules/@shared/domain/errors/validation.error';
 import { ForbiddenError } from '@/modules/@shared/domain/errors/forbidden.error';
 import { MemberRole, InviteStatus } from '@/modules/@shared/domain/enums';
+import { normalizeEmail } from '@/modules/@shared/domain/utils/email';
 import InviteValidatorFactory from './validators/invite.validator';
 import { InviteCreatedEvent } from '../event/invite-created.event';
 import { InviteAcceptedEvent } from '../event/invite-accepted.event';
+import { InviteResentEvent } from '../event/invite-resent.event';
 
 export interface InviteProps {
   id?: string;
@@ -30,7 +32,7 @@ export class Invite extends BaseEntity {
 
   constructor(props: InviteProps) {
     super(props.id, props.createdAt, props.updatedAt);
-    this._email = props.email;
+    this._email = normalizeEmail(props.email);
     this._role = props.role;
     this._status = props.status ?? InviteStatus.PENDING;
     this._token = props.token;
@@ -100,6 +102,9 @@ export class Invite extends BaseEntity {
     this._token = newToken;
     this._expiresAt = newExpiresAt;
     this.update();
+    this.addEvent(
+      new InviteResentEvent(this._id, this._email, this._organizationId),
+    );
   }
 
   validate(fields?: string[]): void {

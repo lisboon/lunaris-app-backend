@@ -3,7 +3,7 @@ paths:
   - "src/infra/http/**/*.ts"
 ---
 
-# Infrastructure HTTP Layer — Regras
+# Infrastructure HTTP Layer — Rules
 
 ## NestJS Module
 
@@ -34,8 +34,14 @@ export class MemberService {
 
 ## Controller
 
-Guards são aplicados **uma vez** no `@Controller` e o decorator `@Roles({ role })`
-anota o nível mínimo exigido por rota.
+Guards are applied **once** on the `@Controller`. The `@Roles({ role })` decorator
+states the minimum role required per route.
+
+`@Body()` / `@Query()` / `@Param()` inputs must be **concrete classes** with
+`class-validator` decorators. The global `ValidationPipe` is configured with
+`whitelist: true` and `forbidNonWhitelisted: true`, which only applies to class
+instances — `Pick<>`, `Omit<>`, inline type literals and plain interfaces are
+silently skipped and open a trust hole on untrusted input.
 
 ```typescript
 @ApiTags('Members')
@@ -58,7 +64,7 @@ export class MemberController {
   async changeRole(
     @Param('id') id: string,
     @Request() req: { user: JwtPayload },
-    @Body() body: { role: MemberRole },
+    @Body() body: ChangeRoleBodyDto,
   ) {
     await this.service.changeRole({
       id,
@@ -69,22 +75,38 @@ export class MemberController {
 }
 ```
 
+### Body DTOs
+
+One body class per mutating route, colocated under `src/infra/http/[module]/dto/`:
+
+```typescript
+// src/infra/http/member/dto/change-role.body.dto.ts
+export class ChangeRoleBodyDto {
+  @IsEnum(MemberRole)
+  role!: MemberRole;
+}
+```
+
+Never reuse a facade/use case DTO as a body type — those include fields the
+client must not set (`id`, `organizationId`, `userId`, …). Derive the body class
+from the request surface you actually expose.
+
 ### `@Roles` decorator
 
 ```typescript
 // src/infra/http/shared/roles.decorator.ts
 export interface RolePermission {
-  role: MemberRole; // nível mínimo exigido
+  role: MemberRole; // minimum level required
 }
 export const Roles = Reflector.createDecorator<RolePermission>();
 ```
 
-Hierarquia (do menor para o maior): `VIEWER < DESIGNER < ADMIN`.
+Hierarchy (low to high): `VIEWER < DESIGNER < ADMIN`.
 
-- `@Roles({ role: MemberRole.VIEWER })` — qualquer membro autenticado
-- `@Roles({ role: MemberRole.DESIGNER })` — DESIGNER ou ADMIN
-- `@Roles({ role: MemberRole.ADMIN })` — apenas ADMIN
-- Ausência do decorator → rota pública (mas ainda passa por `AuthGuard` se o controller aplicar).
+- `@Roles({ role: MemberRole.VIEWER })` — any authenticated member
+- `@Roles({ role: MemberRole.DESIGNER })` — DESIGNER or ADMIN
+- `@Roles({ role: MemberRole.ADMIN })` — ADMIN only
+- No decorator → public route (still passes through `AuthGuard` if the controller applies it).
 
 ### `JwtPayload`
 
@@ -98,20 +120,20 @@ export interface JwtPayload {
 }
 ```
 
-`req.user.organizationId` é a fonte canônica do tenant para queries. **Nunca** leia
-`organizationId` do body ou da query string.
+`req.user.organizationId` is the canonical source of tenancy for queries.
+**Never** read `organizationId` from the body or query string.
 
 ## Available Guards
 
 | Guard | Purpose |
 |-------|-----|
-| `AuthGuard` | Verifica JWT Bearer e popula `req.user: JwtPayload` |
-| `RolesGuard` | Lê `@Roles({ role })` e compara com `req.user.role` |
-| `EngineAuthGuard` | Valida API key HMAC (endpoints `/engine/*`) |
+| `AuthGuard` | Verifies JWT Bearer and populates `req.user: JwtPayload` |
+| `RolesGuard` | Reads `@Roles({ role })` and compares against `req.user.role` |
+| `EngineAuthGuard` | Validates HMAC API key (endpoints `/engine/*`) |
 
 ## Exception Filters
 
-Globais em `src/infra/http/shared/errors/`. Mapeiam erros de domínio para HTTP:
+Global, in `src/infra/http/shared/errors/`. They map domain errors to HTTP:
 
 | Domain error | HTTP |
 |---|---|

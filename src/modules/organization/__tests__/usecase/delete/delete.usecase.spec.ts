@@ -12,21 +12,58 @@ const makeSut = (organization: Organization | null = null) => {
   const findByIdUseCase = {
     execute: jest.fn().mockResolvedValue(organization),
   };
+  const memberGateway = {
+    softDeleteByOrganization: jest.fn().mockResolvedValue(undefined),
+  };
+  const inviteGateway = {
+    cancelPendingByOrganization: jest.fn().mockResolvedValue(undefined),
+  };
+  const transactionManager = {
+    execute: jest.fn().mockImplementation(async (fn: any) => fn({ trx: true })),
+  };
   const useCase = new DeleteUseCase(
     organizationGateway as any,
     findByIdUseCase as any,
+    memberGateway as any,
+    inviteGateway as any,
+    transactionManager as any,
   );
-  return { useCase, organizationGateway, findByIdUseCase };
+  return {
+    useCase,
+    organizationGateway,
+    findByIdUseCase,
+    memberGateway,
+    inviteGateway,
+    transactionManager,
+  };
 };
 
 describe('DeleteOrganizationUseCase', () => {
-  it('soft-deletes the organization', async () => {
+  it('soft-deletes the organization and cascades to members and pending invites', async () => {
     const organization = validOrganization();
-    const { useCase, organizationGateway } = makeSut(organization);
+    const {
+      useCase,
+      organizationGateway,
+      memberGateway,
+      inviteGateway,
+      transactionManager,
+    } = makeSut(organization);
 
     await useCase.execute({ id: organization.id });
 
-    expect(organizationGateway.update).toHaveBeenCalledTimes(1);
+    expect(transactionManager.execute).toHaveBeenCalledTimes(1);
+    expect(organizationGateway.update).toHaveBeenCalledWith(
+      organization,
+      expect.objectContaining({ trx: true }),
+    );
+    expect(memberGateway.softDeleteByOrganization).toHaveBeenCalledWith(
+      organization.id,
+      expect.objectContaining({ trx: true }),
+    );
+    expect(inviteGateway.cancelPendingByOrganization).toHaveBeenCalledWith(
+      organization.id,
+      expect.objectContaining({ trx: true }),
+    );
     expect(organization.deletedAt).toBeDefined();
     expect(organization.active).toBe(false);
   });

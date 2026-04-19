@@ -24,19 +24,22 @@ export default class ChangeRoleUseCase implements ChangeRoleUseCaseInterface {
     const demotingAdmin =
       member.role === MemberRole.ADMIN && input.role !== MemberRole.ADMIN;
 
-    await this.transactionManager.execute(async (trx) => {
-      if (demotingAdmin) {
-        const adminCount = await this.memberGateway.countAdmins(
-          input.organizationId,
-          trx,
-        );
-        if (adminCount <= 1) {
-          throw new ForbiddenError('Cannot demote the last admin');
+    await this.transactionManager.execute(
+      async (trx) => {
+        if (demotingAdmin) {
+          const adminCount = await this.memberGateway.countAdmins(
+            input.organizationId,
+            trx,
+          );
+          if (adminCount <= 1) {
+            throw new ForbiddenError('Cannot demote the last admin');
+          }
         }
-      }
 
-      member.changeRole(input.role);
-      await this.memberGateway.update(member, trx);
-    });
+        member.changeRole(input.role);
+        await this.memberGateway.update(member, trx);
+      },
+      { isolationLevel: 'Serializable' },
+    );
   }
 }

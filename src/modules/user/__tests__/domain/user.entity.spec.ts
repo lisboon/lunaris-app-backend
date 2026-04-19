@@ -36,6 +36,11 @@ describe('User', () => {
         User.create({ ...validProps(), password: '' }),
       ).toThrow(EntityValidationError);
     });
+
+    it('normalizes email (trim + lowercase)', () => {
+      const user = User.create({ ...validProps(), email: '  Geralt@Rivia.COM ' });
+      expect(user.email).toBe('geralt@rivia.com');
+    });
   });
 
   describe('updateUser', () => {
@@ -51,6 +56,12 @@ describe('User', () => {
     it('changes email', () => {
       const user = User.create(validProps());
       user.updateUser({ email: 'ciri@cintra.com' });
+      expect(user.email).toBe('ciri@cintra.com');
+    });
+
+    it('normalizes email on change', () => {
+      const user = User.create(validProps());
+      user.updateUser({ email: '  Ciri@Cintra.COM ' });
       expect(user.email).toBe('ciri@cintra.com');
     });
 

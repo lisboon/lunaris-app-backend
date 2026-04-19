@@ -3,6 +3,7 @@ import { InviteGateway } from '../gateway/invite.gateway';
 import { Invite } from '../domain/invite.entity';
 import { MemberRole, InviteStatus } from '@/modules/@shared/domain/enums';
 import { TransactionContext } from '@/modules/@shared/domain/transaction/transaction-manager.interface';
+import { normalizeEmail } from '@/modules/@shared/domain/utils/email';
 
 export default class InviteRepository implements InviteGateway {
   constructor(private readonly prisma: PrismaClient) {}
@@ -42,7 +43,11 @@ export default class InviteRepository implements InviteGateway {
 
   async findByEmailAndOrg(email: string, organizationId: string): Promise<Invite | null> {
     const row = await this.prisma.invite.findFirst({
-      where: { email, organizationId, status: InviteStatus.PENDING },
+      where: {
+        email: normalizeEmail(email),
+        organizationId,
+        status: InviteStatus.PENDING,
+      },
     });
     return row ? this.toEntity(row) : null;
   }
@@ -83,6 +88,17 @@ export default class InviteRepository implements InviteGateway {
         expiresAt: invite.expiresAt,
         updatedAt: invite.updatedAt,
       },
+    });
+  }
+
+  async cancelPendingByOrganization(
+    organizationId: string,
+    trx?: TransactionContext,
+  ): Promise<void> {
+    const client = this.getClient(trx);
+    await client.invite.updateMany({
+      where: { organizationId, status: InviteStatus.PENDING },
+      data: { status: InviteStatus.CANCELLED, updatedAt: new Date() },
     });
   }
 }

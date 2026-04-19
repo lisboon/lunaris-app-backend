@@ -12,8 +12,7 @@ export class AcceptInviteUseCaseInputDto {
 
   @IsString({ message: 'Password must be a string' })
   @Length(8, 128, { message: 'Password must be between 8 and 128 characters' })
-  @IsOptional()
-  password?: string;
+  password: string;
 }
 
 export interface AcceptInviteUseCaseOutputDto {

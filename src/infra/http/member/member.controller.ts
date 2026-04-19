@@ -15,7 +15,7 @@ import { RolesGuard } from '../auth/roles-guard';
 import { Roles } from '../shared/roles.decorator';
 import { MemberRole } from '@/modules/@shared/domain/enums';
 import { MemberService } from './member.service';
-import { ChangeRoleUseCaseInputDto } from '@/modules/member/usecase/change-role/change-role.usecase.dto';
+import { ChangeRoleBodyDto } from './dto/change-role.body.dto';
 
 @ApiTags('Members')
 @ApiBearerAuth()
@@ -52,7 +52,7 @@ export class MemberController {
   async changeRole(
     @Param('id') id: string,
     @Request() req: { user: JwtPayload },
-    @Body() body: Pick<ChangeRoleUseCaseInputDto, 'role'>,
+    @Body() body: ChangeRoleBodyDto,
   ) {
     await this.memberService.changeRole({
       id,

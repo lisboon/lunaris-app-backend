@@ -15,7 +15,7 @@ import { RolesGuard } from '../auth/roles-guard';
 import { Roles } from '../shared/roles.decorator';
 import { MemberRole } from '@/modules/@shared/domain/enums';
 import { InviteService } from './invite.service';
-import { CreateInviteUseCaseInputDto } from '@/modules/invite/usecase/create-invite/create-invite.usecase.dto';
+import { CreateInviteBodyDto } from './dto/create-invite.body.dto';
 import { AcceptInviteUseCaseInputDto } from '@/modules/invite/usecase/accept-invite/accept-invite.usecase.dto';
 
 @ApiTags('Invites')
@@ -30,7 +30,7 @@ export class InviteController {
   @ApiOperation({ summary: 'Create an invite for a new member' })
   async create(
     @Request() req: { user: JwtPayload },
-    @Body() body: Pick<CreateInviteUseCaseInputDto, 'email' | 'role'>,
+    @Body() body: CreateInviteBodyDto,
   ) {
     return this.inviteService.create({
       email: body.email,

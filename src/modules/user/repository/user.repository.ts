@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { UserGateway } from '../gateway/user.gateway';
 import { User } from '../domain/user.entity';
 import { TransactionContext } from '@/modules/@shared/domain/transaction/transaction-manager.interface';
+import { normalizeEmail } from '@/modules/@shared/domain/utils/email';
 
 export default class UserRepository implements UserGateway {
   constructor(private readonly prisma: PrismaClient) {}
@@ -33,7 +34,7 @@ export default class UserRepository implements UserGateway {
 
   async findByEmail(email: string): Promise<User | null> {
     const row = await this.prisma.user.findFirst({
-      where: { email, deletedAt: null },
+      where: { email: normalizeEmail(email), deletedAt: null },
     });
     return row ? this.toEntity(row) : null;
   }

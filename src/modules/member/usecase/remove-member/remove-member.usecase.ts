@@ -25,19 +25,22 @@ export default class RemoveMemberUseCase
 
     const removingAdmin = member.role === MemberRole.ADMIN;
 
-    await this.transactionManager.execute(async (trx) => {
-      if (removingAdmin) {
-        const adminCount = await this.memberGateway.countAdmins(
-          input.organizationId,
-          trx,
-        );
-        if (adminCount <= 1) {
-          throw new ForbiddenError('Cannot remove the last admin');
+    await this.transactionManager.execute(
+      async (trx) => {
+        if (removingAdmin) {
+          const adminCount = await this.memberGateway.countAdmins(
+            input.organizationId,
+            trx,
+          );
+          if (adminCount <= 1) {
+            throw new ForbiddenError('Cannot remove the last admin');
+          }
         }
-      }
 
-      member.delete();
-      await this.memberGateway.update(member, trx);
-    });
+        member.delete();
+        await this.memberGateway.update(member, trx);
+      },
+      { isolationLevel: 'Serializable' },
+    );
   }
 }

@@ -1,6 +1,7 @@
 import { InviteGateway } from '../../gateway/invite.gateway';
 import { InviteTokenService } from '@/modules/@shared/domain/services/invite-token.service';
 import { NotFoundError } from '@/modules/@shared/domain/errors/not-found.error';
+import { EventDispatcherInterface } from '@/modules/@shared/domain/events/event-dispatcher.interface';
 import { Invite } from '../../domain/invite.entity';
 import {
   ResendInviteUseCaseInputDto,
@@ -13,6 +14,7 @@ export default class ResendInviteUseCase implements ResendInviteUseCaseInterface
   constructor(
     private readonly inviteGateway: InviteGateway,
     private readonly inviteTokenService: InviteTokenService,
+    private readonly eventDispatcher?: EventDispatcherInterface,
   ) {}
 
   async execute(input: ResendInviteUseCaseInputDto): Promise<void> {
@@ -32,5 +34,11 @@ export default class ResendInviteUseCase implements ResendInviteUseCaseInterface
     invite.renewToken(newToken, newExpiresAt);
 
     await this.inviteGateway.update(invite);
+
+    if (this.eventDispatcher) {
+      for (const event of invite.pullEvents()) {
+        await this.eventDispatcher.dispatch(event);
+      }
+    }
   }
 }

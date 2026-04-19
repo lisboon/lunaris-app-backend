@@ -5,5 +5,5 @@ export interface OrganizationGateway {
   findById(id: string): Promise<Organization | null>;
   findBySlug(slug: string): Promise<Organization | null>;
   create(org: Organization, trx?: TransactionContext): Promise<void>;
-  update(org: Organization): Promise<void>;
+  update(org: Organization, trx?: TransactionContext): Promise<void>;
 }
