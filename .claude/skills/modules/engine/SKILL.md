@@ -79,7 +79,7 @@ Gateway returns `ApiKey | null`. `FindByIdUseCase` throws `new NotFoundError(id,
 It is single-purpose: `findByHash → validate (revoked/expired) → touchLastUsed → await update → return {id, organizationId}`. `update` is **awaited**, not fire-and-forget — same rule as any other mutating use case.
 
 ### 7. Facade DTOs are pure interfaces
-`engine.facade.dto.ts` never imports class-validator or swagger. `CreateUseCaseInputDto` in `usecase/create/create.usecase.dto.ts` is a class with `@ApiProperty` / `@ApiHideProperty` / `@IsUUID` decorators — controllers use `OmitType(CreateUseCaseInputDto, ['organizationId'])`.
+`engine.facade.dto.ts` never imports class-validator or swagger. `CreateUseCaseInputDto` in `usecase/create/create.usecase.dto.ts` is a class with `@ApiProperty` / `@ApiHideProperty` / `@IsUUID` decorators used by the use case. The HTTP controller, however, must **not** reuse `CreateUseCaseInputDto` directly as its `@Body()` type — it includes server-set fields (`organizationId`). Create `src/infra/http/engine/dto/create-api-key.body.dto.ts` with only `name` + optional `expiresAt` and accept that on the controller. (Today this still uses `CreateUseCaseInputDto` because `organizationId` is marked `@ApiHideProperty` and relies on `whitelist: true` stripping unknown keys — a working-but-fragile shortcut.)
 
 ---
 
@@ -92,6 +92,10 @@ It is single-purpose: `findByHash → validate (revoked/expired) → touchLastUs
 | `RevokeUseCase` | `{id, organizationId}` → `void` | throws `EntityValidationError` if already revoked |
 | `SearchUseCase` | `{organizationId}` → `{items: SearchItemDto[], total}` | returns summaries (no `keyHash`) |
 | `ValidateKeyUseCase` | `{rawKey}` → `{id, organizationId}` | used by `EngineAuthGuard`; touches `lastUsedAt`; throws `UnauthorizedError` for revoked/expired/missing |
+
+### Cross-module cascade hook
+
+`ApiKeyGateway#revokeByOrganization(organizationId, trx?)` — exposed on the interface and implemented as a `updateMany({ where: { organizationId, revokedAt: null }, data: { revokedAt: now, updatedAt: now } })` call. **There is no matching use case inside `engine/` on purpose**: this is a gateway-level primitive consumed by `OrganizationDeleteUseCase` so that soft-deleting a tenant revokes all of its keys inside the same transaction. A deleted org must not be able to keep serving `missionData` to the UE5 plugin via a leaked key.
 
 ---
 

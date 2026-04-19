@@ -1,4 +1,5 @@
 import { ApiKey } from '../domain/engine.entity';
+import { TransactionContext } from '@/modules/@shared/domain/transaction/transaction-manager.interface';
 
 export interface ApiKeyGateway {
   findByHash(keyHash: string): Promise<ApiKey | null>;
@@ -6,4 +7,8 @@ export interface ApiKeyGateway {
   findByOrganization(organizationId: string): Promise<ApiKey[]>;
   create(apiKey: ApiKey): Promise<void>;
   update(apiKey: ApiKey): Promise<void>;
+  revokeByOrganization(
+    organizationId: string,
+    trx?: TransactionContext,
+  ): Promise<void>;
 }

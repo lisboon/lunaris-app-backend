@@ -15,9 +15,9 @@ import { AuthGuard, JwtPayload } from '../auth/auth-guard';
 import { RolesGuard } from '../auth/roles-guard';
 import { Roles } from '../shared/roles.decorator';
 import { MemberRole } from '@/modules/@shared/domain/enums';
-import { CreateUseCaseInputDto } from '@/modules/mission/usecase/create/create.usecase.dto';
-import { SaveVersionInputDto } from '@/modules/mission/usecase/save-version/save-version.usecase.dto';
-import { PublishInputDto } from '@/modules/mission/usecase/publish/publish.usecase.dto';
+import { CreateMissionBodyDto } from './dto/create-mission.body.dto';
+import { SaveVersionBodyDto } from './dto/save-version.body.dto';
+import { PublishMissionBodyDto } from './dto/publish-mission.body.dto';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -38,7 +38,7 @@ export class MissionController {
   async create(
     @Param('workspaceId') workspaceId: string,
     @Request() req: { user: JwtPayload },
-    @Body() body: CreateUseCaseInputDto,
+    @Body() body: CreateMissionBodyDto,
   ) {
     return this.missionService.create({
       id: body.id,
@@ -58,7 +58,7 @@ export class MissionController {
   async saveVersion(
     @Param('id') missionId: string,
     @Request() req: { user: JwtPayload },
-    @Body() body: SaveVersionInputDto,
+    @Body() body: SaveVersionBodyDto,
   ) {
     return this.missionService.saveVersion({
       graphData: body.graphData,
@@ -78,7 +78,7 @@ export class MissionController {
   async publish(
     @Param('id') missionId: string,
     @Request() req: { user: JwtPayload },
-    @Body() body: PublishInputDto,
+    @Body() body: PublishMissionBodyDto,
   ) {
     return this.missionService.publish({
       missionId,

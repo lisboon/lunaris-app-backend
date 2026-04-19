@@ -17,9 +17,9 @@ import { RolesGuard } from '../auth/roles-guard';
 import { Roles } from '../shared/roles.decorator';
 import { WorkspaceService } from './workspace.service';
 import { MemberRole } from '@/modules/@shared/domain/enums';
-import { CreateUseCaseInputDto } from '@/modules/workspace/usecase/create/create.usecase.dto';
-import { UpdateUseCaseInputDto } from '@/modules/workspace/usecase/update/update.usecase.dto';
-import { SearchUseCaseInputDto } from '@/modules/workspace/usecase/search/search.usecase.dto';
+import { CreateWorkspaceBodyDto } from './dto/create-workspace.body.dto';
+import { UpdateWorkspaceBodyDto } from './dto/update-workspace.body.dto';
+import { SearchWorkspacesQueryDto } from './dto/search-workspaces.query.dto';
 
 @ApiTags('Workspaces')
 @ApiBearerAuth()
@@ -33,7 +33,7 @@ export class WorkspaceController {
   @Roles({ role: MemberRole.ADMIN })
   async create(
     @Request() req: { user: JwtPayload },
-    @Body() body: CreateUseCaseInputDto,
+    @Body() body: CreateWorkspaceBodyDto,
   ) {
     return this.workspaceService.create({
       name: body.name,
@@ -46,7 +46,7 @@ export class WorkspaceController {
   @Roles({ role: MemberRole.VIEWER })
   async search(
     @Request() req: { user: JwtPayload },
-    @Query() query: SearchUseCaseInputDto,
+    @Query() query: SearchWorkspacesQueryDto,
   ) {
     return this.workspaceService.search({
       ...query,
@@ -73,7 +73,7 @@ export class WorkspaceController {
   async update(
     @Param('id') id: string,
     @Request() req: { user: JwtPayload },
-    @Body() body: UpdateUseCaseInputDto,
+    @Body() body: UpdateWorkspaceBodyDto,
   ) {
     await this.workspaceService.update({
       id,

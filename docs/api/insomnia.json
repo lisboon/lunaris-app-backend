@@ -1,0 +1,554 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-04-19T00:00:00.000Z",
+  "__export_source": "lunaris.seed:v1",
+  "resources": [
+    {
+      "_id": "wrk_lunaris",
+      "_type": "workspace",
+      "parentId": null,
+      "name": "Lunaris Backend — Seed (João @ Ubisoft)",
+      "description": "End-to-end MVP flow: register Ubisoft org → login → create workspace 'Cyberpunk Team' → create mission qst_old_country → save version → publish → consume via UE5 engine key. Also covers invites and api-keys.\n\nUse the `Local` environment after spinning up `npm run start:dev`.",
+      "scope": "collection"
+    },
+
+    {
+      "_id": "env_base",
+      "_type": "environment",
+      "parentId": "wrk_lunaris",
+      "name": "Base Environment",
+      "data": {
+        "baseUrl": "http://localhost:3001",
+        "accessToken": "",
+        "organizationId": "",
+        "workspaceId": "",
+        "missionId": "qst_old_country",
+        "versionHash": "",
+        "apiKey": "",
+        "inviteToken": "",
+        "inviteId": "",
+        "memberId": ""
+      },
+      "dataPropertyOrder": {
+        "&": [
+          "baseUrl",
+          "accessToken",
+          "organizationId",
+          "workspaceId",
+          "missionId",
+          "versionHash",
+          "apiKey",
+          "inviteToken",
+          "inviteId",
+          "memberId"
+        ]
+      },
+      "color": null,
+      "isPrivate": false,
+      "metaSortKey": 1
+    },
+    {
+      "_id": "env_local",
+      "_type": "environment",
+      "parentId": "env_base",
+      "name": "Local",
+      "data": {
+        "baseUrl": "http://localhost:3001"
+      },
+      "dataPropertyOrder": { "&": ["baseUrl"] },
+      "color": "#7b61ff",
+      "isPrivate": false,
+      "metaSortKey": 2
+    },
+
+    {
+      "_id": "fld_auth",
+      "_type": "request_group",
+      "parentId": "wrk_lunaris",
+      "name": "1. Auth (públicos + /me)",
+      "description": "Público: /register, /login. Autenticado: /me. `accessToken` vem do login e deve ser colado em Base Environment ou deixado como referência `{{ accessToken }}` após teste manual.",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -1000
+    },
+    {
+      "_id": "req_register",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "POST /auth/register — João + Ubisoft",
+      "method": "POST",
+      "url": "{{ baseUrl }}/auth/register",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"joao@ubisoft.com\",\n  \"name\": \"João Pereira\",\n  \"password\": \"senha-super-forte-123\",\n  \"organizationName\": \"Ubisoft\",\n  \"organizationSlug\": \"ubisoft\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "description": "Cria o usuário, a organização e a Membership ADMIN no mesmo request. Responde 201 com `{ user, organization, member }`.",
+      "metaSortKey": -1000
+    },
+    {
+      "_id": "req_login",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "POST /auth/login — obtém accessToken",
+      "method": "POST",
+      "url": "{{ baseUrl }}/auth/login",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"joao@ubisoft.com\",\n  \"password\": \"senha-super-forte-123\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "description": "Resposta: `{ accessToken, user, organization, role }`. Copie o `accessToken` e `organization.id` para o Base Environment (`accessToken` e `organizationId`).",
+      "metaSortKey": -900
+    },
+    {
+      "_id": "req_me",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "GET /auth/me",
+      "method": "GET",
+      "url": "{{ baseUrl }}/auth/me",
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ accessToken }}"
+      },
+      "headers": [],
+      "description": "Retorna o usuário do JWT. Útil para confirmar que o token está válido.",
+      "metaSortKey": -800
+    },
+
+    {
+      "_id": "fld_org",
+      "_type": "request_group",
+      "parentId": "wrk_lunaris",
+      "name": "2. Organization (tenant atual)",
+      "description": "Todas as rotas operam sobre a organização do JWT; não existe `:id` no path.",
+      "environment": {},
+      "metaSortKey": -900
+    },
+    {
+      "_id": "req_org_get",
+      "_type": "request",
+      "parentId": "fld_org",
+      "name": "GET /organizations — organização atual",
+      "method": "GET",
+      "url": "{{ baseUrl }}/organizations",
+      "authentication": { "type": "bearer", "token": "{{ accessToken }}" },
+      "headers": [],
+      "metaSortKey": -1000
+    },
+    {
+      "_id": "req_org_patch",
+      "_type": "request",
+      "parentId": "fld_org",
+      "name": "PATCH /organizations — rename tenant (ADMIN)",
+      "method": "PATCH",
+      "url": "{{ baseUrl }}/organizations",
+      "authentication": { "type": "bearer", "token": "{{ accessToken }}" },
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Ubisoft Montréal\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "metaSortKey": -900
+    },
+    {
+      "_id": "req_org_delete",
+      "_type": "request",
+      "parentId": "fld_org",
+      "name": "DELETE /organizations — soft-delete + cascade (ADMIN)",
+      "method": "DELETE",
+      "url": "{{ baseUrl }}/organizations",
+      "authentication": { "type": "bearer", "token": "{{ accessToken }}" },
+      "headers": [],
+      "description": "⚠️ Destrutivo. Soft-deleta org, members, invites pendentes **e revoga todas as api keys** na mesma transação. Responde 204.",
+      "metaSortKey": -800
+    },
+
+    {
+      "_id": "fld_workspaces",
+      "_type": "request_group",
+      "parentId": "wrk_lunaris",
+      "name": "3. Workspaces",
+      "description": "Scope por organização. Após criar 'Cyberpunk Team', copie `id` para `workspaceId` no env.",
+      "environment": {},
+      "metaSortKey": -800
+    },
+    {
+      "_id": "req_ws_create",
+      "_type": "request",
+      "parentId": "fld_workspaces",
+      "name": "POST /workspaces — Cyberpunk Team",
+      "method": "POST",
+      "url": "{{ baseUrl }}/workspaces",
+      "authentication": { "type": "bearer", "token": "{{ accessToken }}" },
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Cyberpunk Team\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "description": "Cria workspace. `organizationId` vem do JWT — NÃO envie no body.",
+      "metaSortKey": -1000
+    },
+    {
+      "_id": "req_ws_search",
+      "_type": "request",
+      "parentId": "fld_workspaces",
+      "name": "GET /workspaces — search paginado",
+      "method": "GET",
+      "url": "{{ baseUrl }}/workspaces",
+      "authentication": { "type": "bearer", "token": "{{ accessToken }}" },
+      "parameters": [
+        { "name": "page", "value": "1", "disabled": false },
+        { "name": "perPage", "value": "10", "disabled": false },
+        { "name": "sort", "value": "createdAt", "disabled": true },
+        { "name": "sortDir", "value": "desc", "disabled": true },
+        { "name": "name", "value": "Cyberpunk", "disabled": true },
+        { "name": "active", "value": "true", "disabled": true }
+      ],
+      "headers": [],
+      "metaSortKey": -900
+    },
+    {
+      "_id": "req_ws_get",
+      "_type": "request",
+      "parentId": "fld_workspaces",
+      "name": "GET /workspaces/{workspaceId}",
+      "method": "GET",
+      "url": "{{ baseUrl }}/workspaces/{{ workspaceId }}",
+      "authentication": { "type": "bearer", "token": "{{ accessToken }}" },
+      "headers": [],
+      "metaSortKey": -800
+    },
+    {
+      "_id": "req_ws_patch",
+      "_type": "request",
+      "parentId": "fld_workspaces",
+      "name": "PATCH /workspaces/{workspaceId} — rename",
+      "method": "PATCH",
+      "url": "{{ baseUrl }}/workspaces/{{ workspaceId }}",
+      "authentication": { "type": "bearer", "token": "{{ accessToken }}" },
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Cyberpunk Team — DLC\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "metaSortKey": -700
+    },
+    {
+      "_id": "req_ws_delete",
+      "_type": "request",
+      "parentId": "fld_workspaces",
+      "name": "DELETE /workspaces/{workspaceId} — soft-delete",
+      "method": "DELETE",
+      "url": "{{ baseUrl }}/workspaces/{{ workspaceId }}",
+      "authentication": { "type": "bearer", "token": "{{ accessToken }}" },
+      "headers": [],
+      "metaSortKey": -600
+    },
+
+    {
+      "_id": "fld_missions",
+      "_type": "request_group",
+      "parentId": "wrk_lunaris",
+      "name": "4. Missions + Versions (DESIGNER)",
+      "description": "Fluxo completo: create mission → save version → publish → active. `versionHash` é SHA-256 (64 hex) da `missionData` retornado pelo save-version — copie para o env.",
+      "environment": {},
+      "metaSortKey": -700
+    },
+    {
+      "_id": "req_mission_create",
+      "_type": "request",
+      "parentId": "fld_missions",
+      "name": "POST /workspaces/{ws}/missions — qst_old_country",
+      "method": "POST",
+      "url": "{{ baseUrl }}/workspaces/{{ workspaceId }}/missions",
+      "authentication": { "type": "bearer", "token": "{{ accessToken }}" },
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"id\": \"{{ missionId }}\",\n  \"name\": \"The Old Country\",\n  \"description\": \"Opening mission of the sertão biome, introduces the two rival factions.\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "description": "`id` precisa casar com `^[a-z][a-z0-9_]*$`. Status inicial = DRAFT.",
+      "metaSortKey": -1000
+    },
+    {
+      "_id": "req_mission_save_version",
+      "_type": "request",
+      "parentId": "fld_missions",
+      "name": "POST /workspaces/{ws}/missions/{id}/versions",
+      "method": "POST",
+      "url": "{{ baseUrl }}/workspaces/{{ workspaceId }}/missions/{{ missionId }}/versions",
+      "authentication": { "type": "bearer", "token": "{{ accessToken }}" },
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"graphData\": {\n    \"nodes\": [\n      { \"id\": \"start\", \"type\": \"start\", \"position\": { \"x\": 0, \"y\": 0 }, \"data\": {} },\n      { \"id\": \"talk_npc\", \"type\": \"task\", \"position\": { \"x\": 260, \"y\": 0 }, \"data\": { \"label\": \"Talk to Dom Sebastião\" } },\n      { \"id\": \"finish\", \"type\": \"finish\", \"position\": { \"x\": 520, \"y\": 0 }, \"data\": {} }\n    ],\n    \"edges\": [\n      { \"id\": \"e1\", \"source\": \"start\", \"target\": \"talk_npc\" },\n      { \"id\": \"e2\", \"source\": \"talk_npc\", \"target\": \"finish\" }\n    ]\n  },\n  \"missionData\": {\n    \"id\": \"{{ missionId }}\",\n    \"version\": 1,\n    \"nodes\": [\n      { \"id\": \"start\", \"type\": \"start\", \"next\": [\"talk_npc\"] },\n      { \"id\": \"talk_npc\", \"type\": \"task\", \"action\": \"talk\", \"target\": \"npc_dom_sebastiao\", \"next\": [\"finish\"] },\n      { \"id\": \"finish\", \"type\": \"finish\", \"next\": [] }\n    ]\n  }\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "description": "Backend valida o DAG (tricolor DFS) e computa SHA-256 de `missionData` → `versionHash`. Copie para env.",
+      "metaSortKey": -900
+    },
+    {
+      "_id": "req_mission_publish",
+      "_type": "request",
+      "parentId": "fld_missions",
+      "name": "PUT /workspaces/{ws}/missions/{id}/publish",
+      "method": "PUT",
+      "url": "{{ baseUrl }}/workspaces/{{ workspaceId }}/missions/{{ missionId }}/publish",
+      "authentication": { "type": "bearer", "token": "{{ accessToken }}" },
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"versionHash\": \"{{ versionHash }}\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "description": "Marca a versão como ativa. Runtime (Engine) passa a servir essa hash.",
+      "metaSortKey": -800
+    },
+    {
+      "_id": "req_mission_versions",
+      "_type": "request",
+      "parentId": "fld_missions",
+      "name": "GET /workspaces/{ws}/missions/{id}/versions",
+      "method": "GET",
+      "url": "{{ baseUrl }}/workspaces/{{ workspaceId }}/missions/{{ missionId }}/versions",
+      "authentication": { "type": "bearer", "token": "{{ accessToken }}" },
+      "parameters": [
+        { "name": "page", "value": "1", "disabled": false },
+        { "name": "perPage", "value": "10", "disabled": false }
+      ],
+      "headers": [],
+      "metaSortKey": -700
+    },
+    {
+      "_id": "req_mission_active",
+      "_type": "request",
+      "parentId": "fld_missions",
+      "name": "GET /workspaces/{ws}/missions/{id}/active — preview",
+      "method": "GET",
+      "url": "{{ baseUrl }}/workspaces/{{ workspaceId }}/missions/{{ missionId }}/active",
+      "authentication": { "type": "bearer", "token": "{{ accessToken }}" },
+      "headers": [],
+      "description": "Retorna o `missionData` publicado (preview via JWT — mesmo conteúdo que o plugin UE5 consome).",
+      "metaSortKey": -600
+    },
+
+    {
+      "_id": "fld_engine",
+      "_type": "request_group",
+      "parentId": "wrk_lunaris",
+      "name": "5. Engine (M2M — plugin UE5)",
+      "description": "Rotas consumidas pelo plugin C++ via `x-api-key` (HMAC). Nenhum JWT aqui.",
+      "environment": {},
+      "metaSortKey": -600
+    },
+    {
+      "_id": "req_apikey_create",
+      "_type": "request",
+      "parentId": "fld_engine",
+      "name": "POST /api-keys — cria key (ADMIN, JWT)",
+      "method": "POST",
+      "url": "{{ baseUrl }}/api-keys",
+      "authentication": { "type": "bearer", "token": "{{ accessToken }}" },
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Unreal Plugin — Cyberpunk DLC\",\n  \"expiresAt\": \"2026-12-31T23:59:59.000Z\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "description": "A resposta contém `rawKey` — **mostrada uma única vez**. Copie para `apiKey` no env.",
+      "metaSortKey": -1000
+    },
+    {
+      "_id": "req_apikey_list",
+      "_type": "request",
+      "parentId": "fld_engine",
+      "name": "GET /api-keys",
+      "method": "GET",
+      "url": "{{ baseUrl }}/api-keys",
+      "authentication": { "type": "bearer", "token": "{{ accessToken }}" },
+      "headers": [],
+      "metaSortKey": -900
+    },
+    {
+      "_id": "req_apikey_revoke",
+      "_type": "request",
+      "parentId": "fld_engine",
+      "name": "DELETE /api-keys/{id}",
+      "method": "DELETE",
+      "url": "{{ baseUrl }}/api-keys/:id",
+      "authentication": { "type": "bearer", "token": "{{ accessToken }}" },
+      "headers": [],
+      "metaSortKey": -800
+    },
+    {
+      "_id": "req_engine_active",
+      "_type": "request",
+      "parentId": "fld_engine",
+      "name": "GET /missions/engine/{id}/active — plugin UE5",
+      "method": "GET",
+      "url": "{{ baseUrl }}/missions/engine/{{ missionId }}/active",
+      "headers": [
+        { "name": "x-api-key", "value": "{{ apiKey }}" }
+      ],
+      "description": "M2M. Retorna `missionData` + `versionHash` da versão ativa. Valida `organizationId` via HMAC da key.",
+      "metaSortKey": -700
+    },
+
+    {
+      "_id": "fld_invites",
+      "_type": "request_group",
+      "parentId": "wrk_lunaris",
+      "name": "6. Invites",
+      "description": "Fluxo de convite: ADMIN cria → convidado aceita (público, com token).",
+      "environment": {},
+      "metaSortKey": -500
+    },
+    {
+      "_id": "req_invite_create",
+      "_type": "request",
+      "parentId": "fld_invites",
+      "name": "POST /invites — convida designer",
+      "method": "POST",
+      "url": "{{ baseUrl }}/invites",
+      "authentication": { "type": "bearer", "token": "{{ accessToken }}" },
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"maria@ubisoft.com\",\n  \"role\": \"DESIGNER\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "description": "Roles válidos: `ADMIN` | `DESIGNER` | `VIEWER`. Copie o `token` retornado para `inviteToken`.",
+      "metaSortKey": -1000
+    },
+    {
+      "_id": "req_invite_list",
+      "_type": "request",
+      "parentId": "fld_invites",
+      "name": "GET /invites",
+      "method": "GET",
+      "url": "{{ baseUrl }}/invites",
+      "authentication": { "type": "bearer", "token": "{{ accessToken }}" },
+      "headers": [],
+      "metaSortKey": -900
+    },
+    {
+      "_id": "req_invite_resend",
+      "_type": "request",
+      "parentId": "fld_invites",
+      "name": "POST /invites/{id}/resend",
+      "method": "POST",
+      "url": "{{ baseUrl }}/invites/{{ inviteId }}/resend",
+      "authentication": { "type": "bearer", "token": "{{ accessToken }}" },
+      "headers": [],
+      "metaSortKey": -800
+    },
+    {
+      "_id": "req_invite_cancel",
+      "_type": "request",
+      "parentId": "fld_invites",
+      "name": "DELETE /invites/{id} — cancel",
+      "method": "DELETE",
+      "url": "{{ baseUrl }}/invites/{{ inviteId }}",
+      "authentication": { "type": "bearer", "token": "{{ accessToken }}" },
+      "headers": [],
+      "metaSortKey": -700
+    },
+    {
+      "_id": "req_invite_accept",
+      "_type": "request",
+      "parentId": "fld_invites",
+      "name": "POST /invites/accept — público",
+      "method": "POST",
+      "url": "{{ baseUrl }}/invites/accept",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"token\": \"{{ inviteToken }}\",\n  \"name\": \"Maria Silva\",\n  \"password\": \"outra-senha-forte-456\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "description": "Cria User + Member dentro da transação do aceite. Sem JWT.",
+      "metaSortKey": -600
+    },
+
+    {
+      "_id": "fld_members",
+      "_type": "request_group",
+      "parentId": "wrk_lunaris",
+      "name": "7. Members (RBAC)",
+      "description": "Lista/edição de membros. ADMIN-only para mudar role e remover.",
+      "environment": {},
+      "metaSortKey": -400
+    },
+    {
+      "_id": "req_member_list",
+      "_type": "request",
+      "parentId": "fld_members",
+      "name": "GET /members",
+      "method": "GET",
+      "url": "{{ baseUrl }}/members",
+      "authentication": { "type": "bearer", "token": "{{ accessToken }}" },
+      "headers": [],
+      "metaSortKey": -1000
+    },
+    {
+      "_id": "req_member_get",
+      "_type": "request",
+      "parentId": "fld_members",
+      "name": "GET /members/{id}",
+      "method": "GET",
+      "url": "{{ baseUrl }}/members/{{ memberId }}",
+      "authentication": { "type": "bearer", "token": "{{ accessToken }}" },
+      "headers": [],
+      "metaSortKey": -900
+    },
+    {
+      "_id": "req_member_role",
+      "_type": "request",
+      "parentId": "fld_members",
+      "name": "PATCH /members/{id}/role",
+      "method": "PATCH",
+      "url": "{{ baseUrl }}/members/{{ memberId }}/role",
+      "authentication": { "type": "bearer", "token": "{{ accessToken }}" },
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"role\": \"ADMIN\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "description": "Promove/rebaixa. Protegido por isolation SERIALIZABLE para não deixar a org sem admin (last-admin check).",
+      "metaSortKey": -800
+    },
+    {
+      "_id": "req_member_remove",
+      "_type": "request",
+      "parentId": "fld_members",
+      "name": "DELETE /members/{id}",
+      "method": "DELETE",
+      "url": "{{ baseUrl }}/members/{{ memberId }}",
+      "authentication": { "type": "bearer", "token": "{{ accessToken }}" },
+      "headers": [],
+      "metaSortKey": -700
+    }
+  ]
+}

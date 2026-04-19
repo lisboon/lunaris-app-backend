@@ -4,9 +4,14 @@ import type {
 } from '@prisma/client';
 import { ApiKey } from '../domain/engine.entity';
 import { ApiKeyGateway } from '../gateway/engine.gateway';
+import { TransactionContext } from '@/modules/@shared/domain/transaction/transaction-manager.interface';
 
 export default class ApiKeyRepository implements ApiKeyGateway {
   constructor(private readonly prisma: PrismaClient) {}
+
+  private getClient(trx?: TransactionContext): PrismaClient {
+    return (trx as PrismaClient) ?? this.prisma;
+  }
 
   private toEntity(row: PrismaApiKeyRow): ApiKey {
     return new ApiKey({
@@ -70,6 +75,18 @@ export default class ApiKeyRepository implements ApiKeyGateway {
         revokedAt: apiKey.revokedAt,
         lastUsedAt: apiKey.lastUsedAt,
       },
+    });
+  }
+
+  async revokeByOrganization(
+    organizationId: string,
+    trx?: TransactionContext,
+  ): Promise<void> {
+    const client = this.getClient(trx);
+    const now = new Date();
+    await client.organizationApiKey.updateMany({
+      where: { organizationId, revokedAt: null },
+      data: { revokedAt: now, updatedAt: now },
     });
   }
 }

@@ -1,6 +1,7 @@
 import { OrganizationGateway } from '../../gateway/organization.gateway';
 import { MemberGateway } from '@/modules/member/gateway/member.gateway';
 import { InviteGateway } from '@/modules/invite/gateway/invite.gateway';
+import { ApiKeyGateway } from '@/modules/engine/gateway/engine.gateway';
 import { TransactionManager } from '@/modules/@shared/domain/transaction/transaction-manager.interface';
 import { FindByIdUseCaseInterface } from '../find-by-id/find-by-id.usecase.dto';
 import {
@@ -14,6 +15,7 @@ export default class DeleteUseCase implements DeleteUseCaseInterface {
     private readonly findByIdUseCase: FindByIdUseCaseInterface,
     private readonly memberGateway: MemberGateway,
     private readonly inviteGateway: InviteGateway,
+    private readonly apiKeyGateway: ApiKeyGateway,
     private readonly transactionManager: TransactionManager,
   ) {}
 
@@ -26,6 +28,7 @@ export default class DeleteUseCase implements DeleteUseCaseInterface {
       await this.organizationGateway.update(organization, trx);
       await this.memberGateway.softDeleteByOrganization(input.id, trx);
       await this.inviteGateway.cancelPendingByOrganization(input.id, trx);
+      await this.apiKeyGateway.revokeByOrganization(input.id, trx);
     });
   }
 }

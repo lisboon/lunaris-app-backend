@@ -158,11 +158,20 @@ The entity persists `active` on create and update. `toDomainEntity` reads `activ
 
 - `src/infra/http/mission/mission.module.ts` — `MissionModule` exports `MissionService` and provides `MissionFacade` via factory.
 - `src/infra/http/mission/mission.controller.ts` — REST surface at `workspaces/:workspaceId/missions`. Guarded by `AuthGuard + RolesGuard`.
-  - `POST /` (create) — requires `DESIGNER`, extracts `workspaceId` from route param.
-  - `POST /:id/versions` (saveVersion) — requires `DESIGNER`.
-  - `PUT /:id/publish` — requires `DESIGNER`.
+  - `POST /` (create) — requires `DESIGNER`, extracts `workspaceId` from route param. `@Body() CreateMissionBodyDto` (id snake_case + name + description?).
+  - `POST /:id/versions` (saveVersion) — requires `DESIGNER`. `@Body() SaveVersionBodyDto` (graphData + missionData).
+  - `PUT /:id/publish` — requires `DESIGNER`. `@Body() PublishMissionBodyDto` (versionHash: 64-char sha256 hex).
   - `GET /:id/versions` (listVersions) — requires `VIEWER`.
   - `GET /:id/active` (getActive) — requires `VIEWER`.
+
+### Body DTOs (dedicated, not reused from use case)
+
+Under `src/infra/http/mission/dto/`:
+- `create-mission.body.dto.ts` — `CreateMissionBodyDto { id, name, description? }`. `organizationId`, `workspaceId` and `authorId` come from JWT/route param, **never** from body.
+- `save-version.body.dto.ts` — `SaveVersionBodyDto { graphData: CanvasGraph, missionData: MissionContract }`. `missionId`, `organizationId`, `authorId` injected by the controller.
+- `publish-mission.body.dto.ts` — `PublishMissionBodyDto { versionHash }` (64-char SHA-256 hex enforced via `@Length(64, 64)`).
+
+This replaces the previous (wrong) pattern where controllers reused `*UseCaseInputDto` classes carrying server-only fields like `organizationId`/`authorId` — the `ValidationPipe` `whitelist` silently stripped those on accident, leaving clients free to poke at undefined surface. The dedicated body DTOs make the request surface explicit and auditable in Swagger.
 - `src/infra/http/mission/mission.service.ts` — thin adapter delegating to `MissionFacade`.
 
 ---

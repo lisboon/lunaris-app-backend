@@ -130,6 +130,27 @@ src/infra/http/[module]/
 - **DTOs**: `class-validator` + `class-transformer`
 - **Entities**: Notification pattern (collects all errors before throwing)
 
+### Canonical error shape on the wire
+
+All 4xx domain errors serialize to the same JSON shape so the frontend can render field-level feedback uniformly:
+
+```json
+{
+  "statusCode": 422,
+  "error": "Unprocessable Entity",
+  "message": [
+    { "field": "email", "message": "Invalid email address" },
+    { "field": "password", "message": "Password must be between 8 and 128 characters" }
+  ]
+}
+```
+
+Two sources must emit this exact shape:
+- `src/infra/http/shared/errors/exception-factory.ts` — handles `class-validator` DTO failures (422 via `ValidationPipe`). Recursively flattens nested `ValidationError` children into `{ field, message }` pairs using dot-notation paths.
+- `src/infra/http/shared/errors/entity-validation.filter.ts` — handles `EntityValidationError` from entities (Notification pattern). The filter maps `notification.toJSON()` directly to `message[]`.
+
+Any other filter that returns a different shape is a bug — fix the filter, don't add a second shape.
+
 ---
 
 ## Infrastructure
@@ -160,4 +181,6 @@ src/infra/http/[module]/
 10. **Tests use the makeSut pattern** with mocks via jest.fn()
 11. **Domain errors** — use existing classes, never throw generic errors
 12. **Guards in controllers** — always `@UseGuards(AuthGuard, RolesGuard)` + `@Role()`
-13. **Conventional commits** — the project uses commitlint
+13. **Body DTOs are dedicated classes** — `@Body()`, `@Query()` and `@Param()` bindings in controllers must be concrete classes living under `src/infra/http/[module]/dto/*.body.dto.ts` (or `*.query.dto.ts`). **Never** reuse `*UseCaseInputDto` classes as body types — they carry server-set fields (`organizationId`, `authorId`, `id`, …) that must come from the JWT / route param, never from the request body. The `ValidationPipe` runs with `whitelist: true`, which silently strips unknown keys — this protects you, but an explicit body DTO is the only auditable surface.
+14. **Conventional commits** — the project uses commitlint
+15. **env.example stays in sync** — every `process.env.X` added to the codebase must appear in `.env.example` with a short comment describing what reads it and whether a default exists.

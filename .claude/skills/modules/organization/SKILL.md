@@ -1,6 +1,6 @@
 ---
 name: organization
-description: Organization module — tenant (studio) management, slug-based uniqueness, profile updates, cascade soft-delete into members and invites.
+description: Organization module — tenant (studio) management, slug-based uniqueness, profile updates, cascade soft-delete into members, pending invites, and API keys.
 user-invocable: true
 argument-hint: “”
 ---
@@ -86,11 +86,19 @@ async execute(input: { id }): Promise<void> {
     await this.organizationGateway.update(organization, trx);
     await this.memberGateway.softDeleteByOrganization(input.id, trx);
     await this.inviteGateway.cancelPendingByOrganization(input.id, trx);
+    await this.apiKeyGateway.revokeByOrganization(input.id, trx);
   });
 }
 ```
 
-This guarantees: once the org row is soft-deleted, its members are soft-deleted and its PENDING invites are CANCELLED — atomically. Combined with `MemberRepository.findByUserId` filtering out tombstoned orgs, users are not locked into a dead tenant after deletion.
+This guarantees that, once the org row is soft-deleted, **atomically**:
+- its members are soft-deleted,
+- its PENDING invites are CANCELLED, and
+- all of its active API keys are revoked (`revokedAt = now()`).
+
+Combined with `MemberRepository.findByUserId` filtering out tombstoned orgs, users are not locked into a dead tenant after deletion, and the UE5 plugin can no longer serve `missionData` to a deleted tenant via a leaked key.
+
+> ⚠️ Still tech debt: Workspaces and Missions of the org are **not** soft-deleted by this cascade (they remain readable inside the now-tombstoned org). See `memory/tech_debt_cascade_softdelete.md`.
 
 ### 6. Soft delete via BaseEntity
 `Organization#delete()` sets `_deletedAt` and deactivates. The repository filters `{ deletedAt: null }` on all reads.
@@ -110,7 +118,7 @@ Organization is **not** scoped by a parent — it IS the tenant boundary. `Organ
 | `FindByIdUseCase` | `{ id }` → `Organization` | throws `NotFoundError(id, Organization)` |
 | `FindBySlugUseCase` | `{ slug }` → `Organization \| null` | global scan |
 | `UpdateUseCase` | `{ id, name?, avatarUrl? }` → `void` | slug cannot be mutated (entity has no setter) |
-| `DeleteUseCase` | `{ id }` → `void` | transactional cascade: org + members + pending invites |
+| `DeleteUseCase` | `{ id }` → `void` | transactional cascade: org + members + pending invites + api keys |
 
 ---
 
@@ -172,7 +180,7 @@ The `PATCH` body is a concrete DTO class under `src/infra/http/organization/dto/
 - `src/infra/http/organization/organization.module.ts` — provides `OrganizationFacade` via factory.
 - `src/infra/http/organization/organization.controller.ts` — REST at `/organizations`. `AuthGuard + RolesGuard`.
 - `src/infra/http/organization/organization.service.ts` — thin adapter to `OrganizationFacade`.
-- `OrganizationFacadeFactory.create()` wires `OrganizationRepository`, `MemberRepository`, `InviteRepository`, and `PrismaTransactionManager` into `DeleteUseCase`.
+- `OrganizationFacadeFactory.create()` wires `OrganizationRepository`, `MemberRepository`, `InviteRepository`, `ApiKeyRepository` (from the engine module) and `PrismaTransactionManager` into `DeleteUseCase`.
 
 ---
 
@@ -182,7 +190,8 @@ The `PATCH` body is a concrete DTO class under `src/infra/http/organization/dto/
 - Domain entity + validator tested **without mocks** (pure).
 - `DeleteUseCase` spec asserts:
   - `organization.delete()` is called before any gateway write
-  - `organizationGateway.update`, `memberGateway.softDeleteByOrganization`, and `inviteGateway.cancelPendingByOrganization` all receive the same `trx`
+  - `organizationGateway.update`, `memberGateway.softDeleteByOrganization`, `inviteGateway.cancelPendingByOrganization` **and** `apiKeyGateway.revokeByOrganization` all receive the same `trx`
+  - api-key revocation happens **after** the org update (asserted via `mock.invocationCallOrder`) so that the write order matches the cascade intent
   - the whole thing runs inside a single `transactionManager.execute` call
 - `UpdateUseCase` spec covers: name/avatarUrl updates persist, slug is not accepted as input.
 - Coverage: **In Development**.

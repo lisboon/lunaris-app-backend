@@ -18,6 +18,9 @@ const makeSut = (organization: Organization | null = null) => {
   const inviteGateway = {
     cancelPendingByOrganization: jest.fn().mockResolvedValue(undefined),
   };
+  const apiKeyGateway = {
+    revokeByOrganization: jest.fn().mockResolvedValue(undefined),
+  };
   const transactionManager = {
     execute: jest.fn().mockImplementation(async (fn: any) => fn({ trx: true })),
   };
@@ -26,6 +29,7 @@ const makeSut = (organization: Organization | null = null) => {
     findByIdUseCase as any,
     memberGateway as any,
     inviteGateway as any,
+    apiKeyGateway as any,
     transactionManager as any,
   );
   return {
@@ -34,18 +38,20 @@ const makeSut = (organization: Organization | null = null) => {
     findByIdUseCase,
     memberGateway,
     inviteGateway,
+    apiKeyGateway,
     transactionManager,
   };
 };
 
 describe('DeleteOrganizationUseCase', () => {
-  it('soft-deletes the organization and cascades to members and pending invites', async () => {
+  it('soft-deletes the organization and cascades to members, pending invites and api keys', async () => {
     const organization = validOrganization();
     const {
       useCase,
       organizationGateway,
       memberGateway,
       inviteGateway,
+      apiKeyGateway,
       transactionManager,
     } = makeSut(organization);
 
@@ -64,8 +70,24 @@ describe('DeleteOrganizationUseCase', () => {
       organization.id,
       expect.objectContaining({ trx: true }),
     );
+    expect(apiKeyGateway.revokeByOrganization).toHaveBeenCalledWith(
+      organization.id,
+      expect.objectContaining({ trx: true }),
+    );
     expect(organization.deletedAt).toBeDefined();
     expect(organization.active).toBe(false);
+  });
+
+  it('revokes api keys inside the same transaction as the org soft-delete', async () => {
+    const organization = validOrganization();
+    const { useCase, organizationGateway, apiKeyGateway } = makeSut(organization);
+
+    await useCase.execute({ id: organization.id });
+
+    const orgUpdateOrder = organizationGateway.update.mock.invocationCallOrder[0];
+    const apiKeyRevokeOrder =
+      apiKeyGateway.revokeByOrganization.mock.invocationCallOrder[0];
+    expect(apiKeyRevokeOrder).toBeGreaterThan(orgUpdateOrder);
   });
 
   it('throws NotFoundError propagated from findByIdUseCase', async () => {
