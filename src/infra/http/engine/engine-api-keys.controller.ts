@@ -15,7 +15,7 @@ import { Roles } from '../shared/roles.decorator';
 import { MemberRole } from '@/modules/@shared/domain/enums';
 import { EngineApiKeysService } from './engine-api-keys.service';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { CreateUseCaseInputDto } from '@/modules/engine/usecase/create/create.usecase.dto';
+import { CreateApiKeyBodyDto } from './dto/create-api-key.body.dto';
 
 @ApiTags('API Keys')
 @ApiBearerAuth()
@@ -32,7 +32,7 @@ export class EngineApiKeysController {
   @Roles({ role: MemberRole.ADMIN })
   async create(
     @Request() req: { user: JwtPayload },
-    @Body() body: CreateUseCaseInputDto,
+    @Body() body: CreateApiKeyBodyDto,
   ) {
     return this.engineApiKeysService.create({
       organizationId: req.user.organizationId,

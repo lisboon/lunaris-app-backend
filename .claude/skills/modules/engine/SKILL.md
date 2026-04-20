@@ -79,7 +79,7 @@ Gateway returns `ApiKey | null`. `FindByIdUseCase` throws `new NotFoundError(id,
 It is single-purpose: `findByHash → validate (revoked/expired) → touchLastUsed → await update → return {id, organizationId}`. `update` is **awaited**, not fire-and-forget — same rule as any other mutating use case.
 
 ### 7. Facade DTOs are pure interfaces
-`engine.facade.dto.ts` never imports class-validator or swagger. `CreateUseCaseInputDto` in `usecase/create/create.usecase.dto.ts` is a class with `@ApiProperty` / `@ApiHideProperty` / `@IsUUID` decorators used by the use case. The HTTP controller, however, must **not** reuse `CreateUseCaseInputDto` directly as its `@Body()` type — it includes server-set fields (`organizationId`). Create `src/infra/http/engine/dto/create-api-key.body.dto.ts` with only `name` + optional `expiresAt` and accept that on the controller. (Today this still uses `CreateUseCaseInputDto` because `organizationId` is marked `@ApiHideProperty` and relies on `whitelist: true` stripping unknown keys — a working-but-fragile shortcut.)
+`engine.facade.dto.ts` never imports class-validator or swagger. `CreateUseCaseInputDto` in `usecase/create/create.usecase.dto.ts` is a class with `@ApiProperty` / `@ApiHideProperty` / `@IsUUID` decorators used by the use case. The HTTP controller binds `@Body()` to `CreateApiKeyBodyDto` (`src/infra/http/engine/dto/create-api-key.body.dto.ts`) with only client-facing fields (`name`, optional `expiresAt`); `organizationId` is read from `req.user` and composed in the service layer — never from the request body.
 
 ---
 

@@ -10,7 +10,10 @@ export class JwtTokenServiceImpl implements JwtTokenService {
   private readonly expiresIn: SignOptions['expiresIn'];
 
   constructor() {
-    this.secret = process.env.JWT_SECRET || 'fallback-secret';
+    if (!process.env.JWT_SECRET) {
+      throw new Error('JWT_SECRET is required');
+    }
+    this.secret = process.env.JWT_SECRET;
     this.expiresIn = (process.env.JWT_EXPIRES_IN ||
       '7d') as SignOptions['expiresIn'];
   }
