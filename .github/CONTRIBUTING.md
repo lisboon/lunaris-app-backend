@@ -111,7 +111,7 @@ chore: bump prisma to 7.3.1
 
 ## Reporting Issues
 
-- If you encounter a bug or have a feature request, please open an issue in the Issues section of this repository. Provide as much detail as possible to help us address the issue effectively.
+- If you encounter a bug or have a feature request, please open an issue in the [Issues](https://github.com/lisboon/lunaris-app-backend/issues) section of this repository. Provide as much detail as possible to help us address the issue effectively.
 
 ## License
 
