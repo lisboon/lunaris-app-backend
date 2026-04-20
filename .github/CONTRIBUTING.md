@@ -7,6 +7,10 @@
   Lunaris<span style="color: #c8ec3f;">.</span>
 </h3>
 
+<p align="center">
+  Design. Compile. Play. 
+</p>
+
 # Contributing to Lunaris
 
 Thank you for considering contributing to this project! By contributing, you help make this project better for everyone. Please take a moment to
