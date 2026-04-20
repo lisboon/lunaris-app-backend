@@ -7,6 +7,10 @@
   Lunaris<span style="color: #c8ec3f;">.</span>
 </h3>
 
+<p align="center">
+  Design. Compile. Play. 
+</p>
+
 # Contributing to Lunaris
 
 Thank you for considering contributing to this project! By contributing, you help make this project better for everyone. Please take a moment to
@@ -111,11 +115,11 @@ chore: bump prisma to 7.3.1
 
 ## Reporting Issues
 
-- If you encounter a bug or have a feature request, please open an issue in the Issues section of this repository. Provide as much detail as possible to help us address the issue effectively.
+- If you encounter a bug or have a feature request, please open an issue in the [Issues](https://github.com/lisboon/lunaris-app-backend/issues) section of this repository. Provide as much detail as possible to help us address the issue effectively.
 
 ## License
 
-By contributing to this project, you agree that your contributions will be licensed under the MIT License.
+By contributing to this project, you agree that your contributions will be licensed under the [MIT License](./LICENSE).
 
 
 #### Thank you for your contributions!
