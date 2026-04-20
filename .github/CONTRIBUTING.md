@@ -115,7 +115,7 @@ chore: bump prisma to 7.3.1
 
 ## License
 
-By contributing to this project, you agree that your contributions will be licensed under the MIT License.
+By contributing to this project, you agree that your contributions will be licensed under the [MIT License](./LICENSE).
 
 
 #### Thank you for your contributions!
