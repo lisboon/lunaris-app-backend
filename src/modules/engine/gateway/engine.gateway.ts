@@ -7,6 +7,7 @@ export interface ApiKeyGateway {
   findByOrganization(organizationId: string): Promise<ApiKey[]>;
   create(apiKey: ApiKey): Promise<void>;
   update(apiKey: ApiKey): Promise<void>;
+  recordUsage(apiKey: ApiKey): Promise<void>;
   revokeByOrganization(
     organizationId: string,
     trx?: TransactionContext,

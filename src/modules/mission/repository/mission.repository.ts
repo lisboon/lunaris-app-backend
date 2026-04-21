@@ -14,6 +14,7 @@ import {
 
 import { NotFoundError } from '@/modules/@shared/domain/errors/not-found.error';
 import { MissionStatus } from '@/modules/@shared/domain/enums';
+import { TransactionContext } from '@/modules/@shared/domain/transaction/transaction-manager.interface';
 import {
   CanvasGraph,
   DAGValidationErrors,
@@ -28,6 +29,10 @@ function fromPrismaJson<T>(value: PrismaJson | null | undefined): T {
 
 export class MissionRepository implements MissionGateway {
   constructor(private readonly prisma: PrismaClient) {}
+
+  private getClient(trx?: TransactionContext): PrismaClient {
+    return (trx as PrismaClient) ?? this.prisma;
+  }
 
   private toDomainEntity(prismaRow: PrismaMissionRow): Mission {
     return new Mission({
@@ -198,5 +203,17 @@ export class MissionRepository implements MissionGateway {
 
     if (!prismaRow) return null;
     return this.toVersionRecord(prismaRow);
+  }
+
+  async softDeleteByOrganization(
+    organizationId: string,
+    trx?: TransactionContext,
+  ): Promise<void> {
+    const client = this.getClient(trx);
+    const now = new Date();
+    await client.mission.updateMany({
+      where: { organizationId, deletedAt: null },
+      data: { active: false, deletedAt: now, updatedAt: now },
+    });
   }
 }

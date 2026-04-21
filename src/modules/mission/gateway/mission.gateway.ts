@@ -1,4 +1,5 @@
 import { Mission } from '../domain/mission.entity';
+import { TransactionContext } from '@/modules/@shared/domain/transaction/transaction-manager.interface';
 import {
   CanvasGraph,
   DAGValidationErrors,
@@ -54,4 +55,8 @@ export interface MissionGateway {
     organizationId: string,
     hash: string,
   ): Promise<MissionVersionRecord | null>;
+  softDeleteByOrganization(
+    organizationId: string,
+    trx?: TransactionContext,
+  ): Promise<void>;
 }

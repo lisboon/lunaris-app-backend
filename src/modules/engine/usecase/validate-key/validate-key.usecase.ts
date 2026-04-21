@@ -23,8 +23,7 @@ export default class ValidateKeyUseCase implements ValidateKeyUseCaseInterface {
       throw new UnauthorizedError('Invalid or revoked Engine API Key');
     }
 
-    apiKey.touchLastUsed();
-    await this.apiKeyRepository.update(apiKey);
+    await this.apiKeyRepository.recordUsage(apiKey);
 
     return {
       id: apiKey.id,

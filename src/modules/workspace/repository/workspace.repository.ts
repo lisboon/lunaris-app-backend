@@ -5,9 +5,14 @@ import { WorkspaceSearchParams } from '../gateway/workspace.filter';
 import WorkspaceQueryBuilder from './workspace.query.builder';
 import { SearchResult } from '@/modules/@shared/repository/search-result';
 import { SearchParams } from '@/modules/@shared/repository/search-params';
+import { TransactionContext } from '@/modules/@shared/domain/transaction/transaction-manager.interface';
 
 export default class WorkspaceRepository implements WorkspaceGateway {
   constructor(private readonly prisma: PrismaClient) {}
+
+  private getClient(trx?: TransactionContext): PrismaClient {
+    return (trx as PrismaClient) ?? this.prisma;
+  }
 
   private toEntity(data: any): Workspace {
     return new Workspace({
@@ -105,5 +110,17 @@ export default class WorkspaceRepository implements WorkspaceGateway {
       where: { organizationId, deletedAt: null },
     });
     return rows.map((row) => this.toEntity(row));
+  }
+
+  async softDeleteByOrganization(
+    organizationId: string,
+    trx?: TransactionContext,
+  ): Promise<void> {
+    const client = this.getClient(trx);
+    const now = new Date();
+    await client.workspace.updateMany({
+      where: { organizationId, deletedAt: null },
+      data: { active: false, deletedAt: now, updatedAt: now },
+    });
   }
 }

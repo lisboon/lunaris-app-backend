@@ -21,6 +21,12 @@ const makeSut = (organization: Organization | null = null) => {
   const apiKeyGateway = {
     revokeByOrganization: jest.fn().mockResolvedValue(undefined),
   };
+  const workspaceGateway = {
+    softDeleteByOrganization: jest.fn().mockResolvedValue(undefined),
+  };
+  const missionGateway = {
+    softDeleteByOrganization: jest.fn().mockResolvedValue(undefined),
+  };
   const transactionManager = {
     execute: jest.fn().mockImplementation(async (fn: any) => fn({ trx: true })),
   };
@@ -30,6 +36,8 @@ const makeSut = (organization: Organization | null = null) => {
     memberGateway as any,
     inviteGateway as any,
     apiKeyGateway as any,
+    workspaceGateway as any,
+    missionGateway as any,
     transactionManager as any,
   );
   return {
@@ -39,12 +47,14 @@ const makeSut = (organization: Organization | null = null) => {
     memberGateway,
     inviteGateway,
     apiKeyGateway,
+    workspaceGateway,
+    missionGateway,
     transactionManager,
   };
 };
 
 describe('DeleteOrganizationUseCase', () => {
-  it('soft-deletes the organization and cascades to members, pending invites and api keys', async () => {
+  it('soft-deletes the organization and cascades to members, pending invites, api keys, missions and workspaces', async () => {
     const organization = validOrganization();
     const {
       useCase,
@@ -52,6 +62,8 @@ describe('DeleteOrganizationUseCase', () => {
       memberGateway,
       inviteGateway,
       apiKeyGateway,
+      workspaceGateway,
+      missionGateway,
       transactionManager,
     } = makeSut(organization);
 
@@ -74,6 +86,14 @@ describe('DeleteOrganizationUseCase', () => {
       organization.id,
       expect.objectContaining({ trx: true }),
     );
+    expect(missionGateway.softDeleteByOrganization).toHaveBeenCalledWith(
+      organization.id,
+      expect.objectContaining({ trx: true }),
+    );
+    expect(workspaceGateway.softDeleteByOrganization).toHaveBeenCalledWith(
+      organization.id,
+      expect.objectContaining({ trx: true }),
+    );
     expect(organization.deletedAt).toBeDefined();
     expect(organization.active).toBe(false);
   });
@@ -88,6 +108,19 @@ describe('DeleteOrganizationUseCase', () => {
     const apiKeyRevokeOrder =
       apiKeyGateway.revokeByOrganization.mock.invocationCallOrder[0];
     expect(apiKeyRevokeOrder).toBeGreaterThan(orgUpdateOrder);
+  });
+
+  it('cascades missions before workspaces so children are soft-deleted before their parent', async () => {
+    const organization = validOrganization();
+    const { useCase, missionGateway, workspaceGateway } = makeSut(organization);
+
+    await useCase.execute({ id: organization.id });
+
+    const missionOrder =
+      missionGateway.softDeleteByOrganization.mock.invocationCallOrder[0];
+    const workspaceOrder =
+      workspaceGateway.softDeleteByOrganization.mock.invocationCallOrder[0];
+    expect(workspaceOrder).toBeGreaterThan(missionOrder);
   });
 
   it('throws NotFoundError propagated from findByIdUseCase', async () => {

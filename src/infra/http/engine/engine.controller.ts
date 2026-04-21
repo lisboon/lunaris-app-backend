@@ -1,10 +1,12 @@
 import { Controller, Get, Param, Request, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiSecurity, ApiTags } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 import { EngineAuthGuard, EngineAuthPayload } from '../auth/engine-auth-guard';
 import { MissionService } from '../mission/mission.service';
 
 @ApiTags('Engine')
 @ApiSecurity('engine-api-key')
+@SkipThrottle({ default: true })
 @UseGuards(EngineAuthGuard)
 @Controller('missions/engine')
 export class EngineController {

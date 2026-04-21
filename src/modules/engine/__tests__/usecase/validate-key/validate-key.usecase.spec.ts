@@ -9,7 +9,7 @@ const makeSut = (apiKey: ApiKey | null) => {
   const hashService = new ApiKeyHashService();
   const repository = {
     findByHash: jest.fn().mockResolvedValue(apiKey),
-    update: jest.fn().mockResolvedValue(undefined),
+    recordUsage: jest.fn().mockResolvedValue(undefined),
   };
   const useCase = new ValidateKeyUseCase(repository as any, hashService);
   return { useCase, repository, hashService };
@@ -51,5 +51,26 @@ describe('ValidateKeyUseCase', () => {
     await expect(
       useCase.execute({ rawKey: 'lnr_live_anything' }),
     ).rejects.toBeInstanceOf(UnauthorizedError);
+  });
+
+  it('delegates lastUsedAt persistence to the repository via recordUsage', async () => {
+    const hashService = new ApiKeyHashService();
+    const { rawKey, keyHash, prefix } = hashService.generate();
+    const apiKey = ApiKey.create({
+      organizationId: orgId,
+      name: 'Unreal',
+      keyHash,
+      prefix,
+    });
+    const { useCase, repository } = makeSut(apiKey);
+    await useCase.execute({ rawKey });
+    expect(repository.recordUsage).toHaveBeenCalledTimes(1);
+    expect(repository.recordUsage).toHaveBeenCalledWith(apiKey);
+  });
+
+  it('does not call recordUsage when the key is invalid', async () => {
+    const { useCase, repository } = makeSut(null);
+    await expect(useCase.execute({ rawKey: 'lnr_live_x' })).rejects.toThrow();
+    expect(repository.recordUsage).not.toHaveBeenCalled();
   });
 });

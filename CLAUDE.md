@@ -67,12 +67,12 @@ João is a Lead Game Designer at **Ubisoft** (`Organization`). Ubisoft has two `
 - **Build/Transform**: SWC (`@swc/core`)
 - **ORM**: Prisma 7 (`@prisma/client`, generated at `generated/prisma/client`)
 - **Database**: PostgreSQL
-- **Auth**: `@nestjs/jwt` + `jsonwebtoken`, `bcrypt` for password hashing
+- **Auth**: `@nestjs/jwt` + `jsonwebtoken`, `bcrypt` for password hashing. `BcryptPasswordHashService` reads `BCRYPT_ROUNDS` directly in its constructor (default 12, minimum 10 — boot fails otherwise), mirroring the env-in-constructor pattern used by `JwtTokenServiceImpl`.
 - **Validation**: `class-validator` + `class-transformer`
 - **API docs**: `@nestjs/swagger`
-- **Security**: `helmet`, `@nestjs/throttler`
+- **Security**: `helmet`, `@nestjs/throttler` (see Rate limiting pattern below).
 - **Testing**: Jest 30 + `ts-jest`, `supertest` (e2e)
-- **Tooling**: ESLint 9, Prettier 3, commitlint + husky (conventional commits)
+- **Tooling**: ESLint 9, Prettier 3, commitlint + husky (conventional commits). Hooks in `.husky/` (`pre-commit` → `npm test`, `commit-msg` → `commitlint`). CI in `.github/workflows/ci.yml` (lint + build + tests + commitlint on PRs).
 - **IDs**: `uuid` (v4)
 
 ## Conventions
@@ -98,7 +98,7 @@ João is a Lead Game Designer at **Ubisoft** (`Organization`). Ubisoft has two `
 ## Patterns
 
 - **Soft delete**: tenant-scoped entities use `deletedAt`. `Invite` uses a status cycle (`PENDING → ACCEPTED | CANCELLED | EXPIRED`). `OrganizationApiKey` uses `revokedAt`. `MissionVersion` is immutable and never deleted.
-- **Cascade (current, partial)**: `OrganizationDeleteUseCase` only propagates to `Member` and `Invite` inside `transactionManager.execute`. **Known tech debt**: `Workspace`, `Mission`, `DialogueTree` and `OrganizationApiKey` are NOT cascaded — an un-revoked api key still serves `missionData` to a UE5 plugin after the org is "deleted". See `memory/tech_debt_cascade_softdelete.md`.
+- **Cascade on org delete**: `OrganizationDeleteUseCase` propagates inside a single `transactionManager.execute` to `Member.softDeleteByOrganization`, `Invite.cancelPendingByOrganization`, `OrganizationApiKey.revokeByOrganization`, `Mission.softDeleteByOrganization`, `Workspace.softDeleteByOrganization`. Children are soft-deleted before parents (mission → workspace). API keys are revoked in the same transaction, closing the Engine `x-api-key` path immediately. When a new tenant-scoped module lands, it **must** expose a `softDeleteByOrganization(orgId, trx?)` gateway method and be wired into this use case — otherwise the Engine/search surface will leak data from "deleted" orgs. `DialogueTree` has a Prisma model but no module yet; when the module is created, wire it here.
 - **Transactions**: gateways that participate in coordinated writes accept `trx?: TransactionContext`. Use cases orchestrate via `transactionManager.execute(async (trx) => ...)`. Pass `{ isolationLevel: 'Serializable' }` as the second argument when the critical section depends on read-modify-write invariants (e.g. last-admin checks).
 - **Domain events**: the entity accumulates events via `this.addEvent(event)`; the **use case** calls `entity.pullEvents()` and dispatches **after** persistence commits (or after `transactionManager.execute` returns). Never dispatch from inside the entity.
 - **Commits**: conventional commits (commitlint + husky)
@@ -107,6 +107,10 @@ João is a Lead Game Designer at **Ubisoft** (`Organization`). Ubisoft has two `
 - **Error shape (canonical)**: every 422 response — from the DTO `ValidationPipe` (via `exceptionFactory`) AND from `EntityValidationErrorFilter` — returns `{ statusCode: 422, error: 'Unprocessable Entity', message: ValidationError[] }` where `ValidationError = { field: string | null, message: string }`. This is the contract the frontend consumes. Any new filter must preserve it.
 - **Errors**: `NotFoundError`, `BadLoginError`, `EntityValidationError`, `ForbiddenError`, `UnauthorizedError`, `TokenExpiredError`.
 - **Guards**: `@UseGuards(AuthGuard, RolesGuard)` on the `@Controller`, `@Roles({ role: MemberRole.X })` per route (minimum level). See `.claude/rules/controllers.md`.
+- **Rate limiting**: two named throttlers registered globally in `ThrottlerModule.forRoot` (`default`, `engine`). The global guard is `EngineThrottlerGuard extends ThrottlerGuard`, which overrides `getTracker()`: when the request carries `x-api-key`, it keys by `sha256(x-api-key)`; otherwise it falls back to the parent's IP-based tracker. This single guard covers both surfaces — no bespoke bucket code.
+  - **Authenticated REST** (`/auth/*`, `/workspaces/*`, `/missions/*` etc.): uses the `default` throttler keyed by IP. Limit from `THROTTLE_LIMIT` (default 30/min). `/auth/login` and `/auth/register` carry a per-route `@Throttle({ default: { limit: 5, ttl: 60_000 } })` override to raise the cost of brute-force attempts.
+  - **Engine M2M** (`/missions/engine/*`): carries `@SkipThrottle({ default: true })` so only the `engine` throttler applies, keyed by `sha256(x-api-key)` (studios behind NAT don't share a bucket). Limits from `ENGINE_THROTTLE_LIMIT` (default 600) and `ENGINE_THROTTLE_WINDOW_MS` (default 60_000). Storage is the framework's in-process store — at horizontal scale swap for `ThrottlerStorageRedisService`.
+- **Engine `lastUsedAt` hot path**: `ValidateKeyUseCase` delegates persistence to `apiKeyRepository.recordUsage(apiKey)`. The repository reads `ENGINE_LAST_USED_THROTTLE_MS` (default 60_000) in its constructor and skips the UPDATE when `apiKey.lastUsedAt` is within that window. Throttle lives at the infra boundary (where the write happens), keeping the use case free of infrastructure config. Without this, every UE5 plugin request would fire a `SELECT + UPDATE` on `organization_api_keys`.
 - **Pagination**: `SearchParams<Filter>` / `SearchResult<T>` from `@shared` (camelCase: `perPage`, `sortDir`, `currentPage`, `lastPage`).
 
 
