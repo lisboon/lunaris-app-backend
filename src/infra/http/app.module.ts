@@ -18,7 +18,7 @@ import { EngineThrottlerGuard } from './shared/throttler/engine-throttler.guard'
       throttlers: [
         {
           name: 'default',
-          ttl: 60_000,
+          ttl: Number(process.env.THROTTLE_WINDOW_MS ?? 60_000),
           limit: Number(process.env.THROTTLE_LIMIT ?? 30),
         },
         {
