@@ -3,7 +3,9 @@
     "allow": [
       "Edit(/.claude/skills/project/**)",
       "Edit(/.claude/skills/modules/**)",
-      "Bash(npx husky *)"
+      "Bash(npx husky *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }
