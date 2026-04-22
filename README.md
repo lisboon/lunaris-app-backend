@@ -34,7 +34,7 @@ The model is tenant-isolated end-to-end: `User` × `Organization` × `Workspace`
 |------------|------|
 | **lunaris-app-backend** ← you are here | Validator, compiler, versioning and REST API |
 | [lunaris-app-frontend]() | React Flow canvas for Game Designers |
-| [lunaris-app-unreal]() | UE5 C++ plugin — consumes the compiled contract at runtime |
+| [lunaris-app-unreal](https://github.com/lisboon/lunaris-app-plugin) | UE5 C++ plugin — consumes the compiled contract at runtime |
 
 ## Prerequisites
 
