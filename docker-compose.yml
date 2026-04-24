@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile.dev
     container_name: lunaris-backend
-    command: /bin/sh -c "npx prisma generate && npm run start:dev"
+    command: /bin/sh -c "npx prisma migrate deploy && npx prisma generate && npm run start:dev"
     volumes:
       - .:/app
       - /app/node_modules

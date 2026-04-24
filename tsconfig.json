@@ -26,5 +26,5 @@
   "watchOptions": {
     "watchFile": "fixedPollingInterval"
   },
-  "exclude": ["prisma", "metadata.ts"]
+  "exclude": ["prisma", "metadata.ts", "generated"]
 }

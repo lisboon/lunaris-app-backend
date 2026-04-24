@@ -6,7 +6,7 @@
 // (engine module convention — see .claude/skills/modules/engine/SKILL.md).
 
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../generated/prisma"
 }
 

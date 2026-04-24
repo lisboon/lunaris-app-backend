@@ -57,7 +57,7 @@ npx prisma migrate dev
 npm run start:dev
 ```
 
-Server starts at `http://localhost:3001`. Swagger UI is available at `/docs`.
+Server starts at `http://localhost:3001`. Swagger UI is available at `/api-docs`.
 
 ## API Reference
 
