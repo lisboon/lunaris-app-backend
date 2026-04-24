@@ -55,6 +55,9 @@ const makeSut = () => {
       graph: { start_node: 'n1', nodes: {} },
     }),
   };
+  const getActiveHashUseCase = {
+    execute: jest.fn().mockResolvedValue({ hash: 'h' }),
+  };
 
   const facade = new MissionFacade(
     findByIdUseCase as any,
@@ -64,6 +67,7 @@ const makeSut = () => {
     publishUseCase as any,
     listVersionsUseCase as any,
     getActiveUseCase as any,
+    getActiveHashUseCase as any,
   );
 
   return {
@@ -76,13 +80,17 @@ const makeSut = () => {
     publishUseCase,
     listVersionsUseCase,
     getActiveUseCase,
+    getActiveHashUseCase,
   };
 };
 
 describe('MissionFacade', () => {
   it('findById delegates and serializes via toJSON', async () => {
     const { facade, mission, findByIdUseCase } = makeSut();
-    const out = await facade.findById({ id: mission.id, organizationId: orgId });
+    const out = await facade.findById({
+      id: mission.id,
+      organizationId: orgId,
+    });
     expect(findByIdUseCase.execute).toHaveBeenCalledWith({
       id: mission.id,
       organizationId: orgId,
@@ -161,5 +169,13 @@ describe('MissionFacade', () => {
     const out = await facade.getActive(input);
     expect(getActiveUseCase.execute).toHaveBeenCalledWith(input);
     expect(out.mission_id).toBe(mission.id);
+  });
+
+  it('getActiveHash delegates', async () => {
+    const { facade, mission, getActiveHashUseCase } = makeSut();
+    const input = { missionId: mission.id, organizationId: orgId };
+    const out = await facade.getActiveHash(input);
+    expect(getActiveHashUseCase.execute).toHaveBeenCalledWith(input);
+    expect(out).toEqual({ hash: 'h' });
   });
 });

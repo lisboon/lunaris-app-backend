@@ -411,6 +411,19 @@
       "description": "M2M. Retorna `missionData` + `versionHash` da versão ativa. Valida `organizationId` via HMAC da key.",
       "metaSortKey": -700
     },
+    {
+      "_id": "req_engine_active_hash",
+      "_type": "request",
+      "parentId": "fld_engine",
+      "name": "GET /missions/engine/{id}/active/hash — watch endpoint",
+      "method": "GET",
+      "url": "{{ baseUrl }}/missions/engine/{{ missionId }}/active/hash",
+      "headers": [
+        { "name": "x-api-key", "value": "{{ apiKey }}" }
+      ],
+      "description": "M2M. Retorna apenas `{ hash }` da versão ativa — endpoint barato para o plugin pollar em designer mode e só buscar o `/active` completo quando o hash mudar.",
+      "metaSortKey": -650
+    },
 
     {
       "_id": "fld_invites",

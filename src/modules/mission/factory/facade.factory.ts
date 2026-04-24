@@ -7,6 +7,7 @@ import SaveVersionUseCase from '../usecase/save-version/save-version.usecase';
 import PublishUseCase from '../usecase/publish/publish.usecase';
 import ListVersionsUseCase from '../usecase/list-versions/list-versions.usecase';
 import GetActiveUseCase from '../usecase/get-active/get-active.usecase';
+import GetActiveHashUseCase from '../usecase/get-active-hash/get-active-hash.usecase';
 import MissionFacade from '../facade/mission.facade';
 import { MissionRepository } from '../repository/mission.repository';
 import { MissionHashService } from '../domain/services/mission-hash.service';
@@ -37,6 +38,7 @@ export default class MissionFacadeFactory {
       findByIdUseCase,
     );
     const getActiveUseCase = new GetActiveUseCase(repository, findByIdUseCase);
+    const getActiveHashUseCase = new GetActiveHashUseCase(findByIdUseCase);
 
     return new MissionFacade(
       findByIdUseCase,
@@ -46,6 +48,7 @@ export default class MissionFacadeFactory {
       publishUseCase,
       listVersionsUseCase,
       getActiveUseCase,
+      getActiveHashUseCase,
     );
   }
 }

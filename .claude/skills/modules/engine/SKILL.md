@@ -139,7 +139,9 @@ interface ApiKeyFacadeInterface {
 - `src/infra/http/auth/auth.module.ts` — `AuthModule` exports `AuthGuard`, `RolesGuard`, `EngineAuthGuard`, `ApiKeyFacade` (provided via `ApiKeyFacadeFactory.create()`).
 - `src/infra/http/auth/engine-auth-guard.ts` — injects `ApiKeyFacade` and calls `validateKey({ rawKey })`. The use case throws `UnauthorizedError` (from `@shared/domain/errors/unauthorized.error`) on missing/revoked/expired keys; the global `UnauthorizedErrorFilter` maps it to HTTP 401. Attaches `{ organizationId, apiKeyId }` to `request.engine`. **No direct Prisma access.**
 - `src/infra/http/engine/engine-api-keys.controller.ts` — REST surface: `POST /api-keys` (create), `GET /api-keys` (search), `DELETE /api-keys/:id` (revoke). Guarded by `AuthGuard + RolesGuard`, requires `ADMIN` role.
-- `src/infra/http/engine/engine.controller.ts` — `GET /missions/engine/:id/active`, guarded by `EngineAuthGuard`, delegates to `MissionService.getActive`.
+- `src/infra/http/engine/engine.controller.ts` — plugin-facing surface:
+  - `GET /missions/engine/:id/active` — delegates to `MissionService.getActive`, returns the full `MissionContract`.
+  - `GET /missions/engine/:id/active/hash` — delegates to `MissionService.getActiveHash`, returns `{ hash }` only. Purpose: cheap watch endpoint — the UE5 plugin polls this every ~3s in designer mode and only fetches the full `/active` when the hash changes. Same guard + throttle policy as `/active`.
 - `EngineModule` imports `AuthModule` (for `EngineAuthGuard` + `ApiKeyFacade`) and `MissionModule` (for `MissionService`).
 
 ### 8. Repository reads `updatedAt` from DB

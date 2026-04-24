@@ -3,6 +3,7 @@ import {
   CreateFacadeInputDto,
   FindByIdFacadeInputDto,
   GetActiveFacadeInputDto,
+  GetActiveHashFacadeInputDto,
   ListVersionsFacadeInputDto,
   PublishFacadeInputDto,
   SaveVersionFacadeInputDto,
@@ -41,5 +42,9 @@ export class MissionService {
 
   async getActive(input: GetActiveFacadeInputDto) {
     return this.missionFacade.getActive(input);
+  }
+
+  async getActiveHash(input: GetActiveHashFacadeInputDto) {
+    return this.missionFacade.getActiveHash(input);
   }
 }

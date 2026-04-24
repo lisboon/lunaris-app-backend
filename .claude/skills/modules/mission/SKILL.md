@@ -33,7 +33,8 @@ src/modules/mission/
 │   ├── save-version/                      ← needs FindByIdUseCase + MissionHashService
 │   ├── publish/                           ← needs FindByIdUseCase + EventDispatcher
 │   ├── list-versions/
-│   └── get-active/
+│   ├── get-active/
+│   └── get-active-hash/                   ← cheap hash-only watch endpoint for plugin polling
 ├── gateway/mission.gateway.ts             ← interface only, NO framework
 ├── repository/mission.repository.ts       ← Prisma impl, uses relation filter for multi-tenant
 ├── facade/
@@ -140,6 +141,7 @@ The entity persists `active` on create and update. `toDomainEntity` reads `activ
 | `PublishUseCase` | `{missionId, organizationId, versionHash}` → `{id, name, status, activeHash, updatedAt}` | rejects invalid versions; dispatches `MissionPublishedEvent` |
 | `ListVersionsUseCase` | `{missionId, organizationId, page?=1, perPage?=20}` → `SearchResult<MissionVersionSummaryDto>` | |
 | `GetActiveUseCase` | `{missionId, organizationId}` → `MissionContract` | throws if no active version |
+| `GetActiveHashUseCase` | `{missionId, organizationId}` → `{hash}` | cheap watch endpoint; injects `FindByIdUseCase` only (no gateway call); throws `NotFoundError(id, MissionActiveVersion)` if `activeHash` is null |
 
 ---
 
@@ -163,6 +165,9 @@ The entity persists `active` on create and update. `toDomainEntity` reads `activ
   - `PUT /:id/publish` — requires `DESIGNER`. `@Body() PublishMissionBodyDto` (versionHash: 64-char sha256 hex).
   - `GET /:id/versions` (listVersions) — requires `VIEWER`.
   - `GET /:id/active` (getActive) — requires `VIEWER`.
+- `src/infra/http/engine/engine.controller.ts` — **Engine M2M surface** at `missions/engine`, guarded by `EngineAuthGuard` + `@SkipThrottle({default:true})`. Reads tenancy from `req.engine.organizationId`.
+  - `GET /:id/active` — returns the compiled `missionData` (`MissionContract`) for the published version.
+  - `GET /:id/active/hash` — returns `{ hash }` only. Plugin polls this every few seconds in designer mode and only calls `/active` when the hash changes. Same guard/throttle as `/active`.
 
 ### Body DTOs (dedicated, not reused from use case)
 

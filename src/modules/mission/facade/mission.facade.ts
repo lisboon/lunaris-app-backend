@@ -5,6 +5,7 @@ import { SaveVersionUseCaseInterface } from '../usecase/save-version/save-versio
 import { PublishUseCaseInterface } from '../usecase/publish/publish.usecase.dto';
 import { ListVersionsUseCaseInterface } from '../usecase/list-versions/list-versions.usecase.dto';
 import { GetActiveUseCaseInterface } from '../usecase/get-active/get-active.usecase.dto';
+import { GetActiveHashUseCaseInterface } from '../usecase/get-active-hash/get-active-hash.usecase.dto';
 import {
   CreateFacadeInputDto,
   CreateFacadeOutputDto,
@@ -12,6 +13,8 @@ import {
   FindByIdFacadeOutputDto,
   GetActiveFacadeInputDto,
   GetActiveFacadeOutputDto,
+  GetActiveHashFacadeInputDto,
+  GetActiveHashFacadeOutputDto,
   ListVersionsFacadeInputDto,
   ListVersionsFacadeOutputDto,
   MissionFacadeInterface,
@@ -31,6 +34,7 @@ export default class MissionFacade implements MissionFacadeInterface {
     private readonly publishUseCase: PublishUseCaseInterface,
     private readonly listVersionsUseCase: ListVersionsUseCaseInterface,
     private readonly getActiveUseCase: GetActiveUseCaseInterface,
+    private readonly getActiveHashUseCase: GetActiveHashUseCaseInterface,
   ) {}
 
   async findById(
@@ -68,5 +72,11 @@ export default class MissionFacade implements MissionFacadeInterface {
     data: GetActiveFacadeInputDto,
   ): Promise<GetActiveFacadeOutputDto> {
     return this.getActiveUseCase.execute(data);
+  }
+
+  async getActiveHash(
+    data: GetActiveHashFacadeInputDto,
+  ): Promise<GetActiveHashFacadeOutputDto> {
+    return this.getActiveHashUseCase.execute(data);
   }
 }

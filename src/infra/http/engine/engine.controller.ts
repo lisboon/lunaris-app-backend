@@ -26,4 +26,19 @@ export class EngineController {
       organizationId: req.engine.organizationId,
     });
   }
+
+  @Get(':id/active/hash')
+  @ApiOperation({
+    summary:
+      'M2M — Return only the current activeHash for cheap polling (watch endpoint)',
+  })
+  async getActiveHash(
+    @Param('id') missionId: string,
+    @Request() req: { engine: EngineAuthPayload },
+  ) {
+    return this.missionService.getActiveHash({
+      missionId,
+      organizationId: req.engine.organizationId,
+    });
+  }
 }

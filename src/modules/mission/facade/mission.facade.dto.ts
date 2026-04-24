@@ -101,6 +101,14 @@ export interface GetActiveFacadeInputDto {
 }
 export type GetActiveFacadeOutputDto = MissionContract;
 
+export interface GetActiveHashFacadeInputDto {
+  missionId: string;
+  organizationId: string;
+}
+export interface GetActiveHashFacadeOutputDto {
+  hash: string;
+}
+
 export interface MissionFacadeInterface {
   findById(data: FindByIdFacadeInputDto): Promise<FindByIdFacadeOutputDto>;
   create(data: CreateFacadeInputDto): Promise<CreateFacadeOutputDto>;
@@ -113,4 +121,7 @@ export interface MissionFacadeInterface {
     data: ListVersionsFacadeInputDto,
   ): Promise<ListVersionsFacadeOutputDto>;
   getActive(data: GetActiveFacadeInputDto): Promise<GetActiveFacadeOutputDto>;
+  getActiveHash(
+    data: GetActiveHashFacadeInputDto,
+  ): Promise<GetActiveHashFacadeOutputDto>;
 }
